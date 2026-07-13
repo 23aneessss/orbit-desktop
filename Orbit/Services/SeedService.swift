@@ -4,6 +4,7 @@ import SwiftData
 enum SeedService {
     @MainActor
     static func seedIfNeeded(context: ModelContext) {
+        guard UserDefaults.standard.bool(forKey: "orbit:demo-data-enabled") else { return }
         let descriptor = FetchDescriptor<Habit>()
         guard (try? context.fetchCount(descriptor)) == 0 else { return }
 
@@ -48,4 +49,3 @@ enum SeedService {
         try? context.save()
     }
 }
-

@@ -167,6 +167,7 @@ struct PeopleView: View {
     }
 
     private func seedPeopleIfNeeded() {
+        guard UserDefaults.standard.bool(forKey: "orbit:demo-data-enabled") else { return }
         guard !peopleSeeded else { return }
         guard contacts.isEmpty else { peopleSeeded = true; return }
         let people = [

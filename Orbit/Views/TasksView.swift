@@ -105,6 +105,7 @@ struct TasksView: View {
     }
 
     private func seedTasksIfNeeded() {
+        guard UserDefaults.standard.bool(forKey: "orbit:demo-data-enabled") else { return }
         guard !tasksSeeded else { return }
         guard tasks.isEmpty else { tasksSeeded = true; return }
         let launch = OrbitTask(title: "Launch Orbit desktop", note: "Ship the first native, local-first release.")

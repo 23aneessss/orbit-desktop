@@ -169,6 +169,7 @@ struct SettingsView: View {
     private func importData() { do { if let summary = try ImportService.restore(into: modelContext) { exportMessage = summary.message } } catch { exportMessage = "Could not restore: \(error.localizedDescription)" } }
     private func wipeAllData() {
         logs.forEach(modelContext.delete); habits.forEach(modelContext.delete); ideaLinks.forEach(modelContext.delete); ideas.forEach(modelContext.delete); stepLinks.forEach(modelContext.delete); boardStrokes.forEach(modelContext.delete); boardNotes.forEach(modelContext.delete); steps.forEach(modelContext.delete); tasks.forEach(modelContext.delete); interactions.forEach(modelContext.delete); contacts.forEach(modelContext.delete); try? modelContext.save()
+        UserDefaults.standard.set(false, forKey: "orbit:demo-data-enabled")
         UserDefaults.standard.set(true, forKey: "orbit:tasks-seeded"); UserDefaults.standard.set(true, forKey: "orbit:people-seeded")
     }
 }
