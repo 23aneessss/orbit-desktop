@@ -10,6 +10,7 @@
 		0B108A04325E375330215A8F /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 495DCA72659439056D676B45 /* HomeView.swift */; };
 		0C0F9C5BC526F88FEF38E9DE /* ImportService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 51C75835C9455A83B47B5E64 /* ImportService.swift */; };
 		0E7452D1BDAB765F61F97BC1 /* IdeasView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0932C8BD5D10F4ACA0F61536 /* IdeasView.swift */; };
+		1422A0758899739CFAF25423 /* ImportServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4EE5D477AB5624DD9F40103 /* ImportServiceTests.swift */; };
 		2375987409E9D494F95E95BA /* DateUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1AE6983885089AF77C700BD0 /* DateUtils.swift */; };
 		2B4A710673B3F7E20419E08F /* TasksView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 46E8F8129B179906DA04E4B1 /* TasksView.swift */; };
 		30CB47074901942DD762E6DD /* ExportService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E423F1AAC47A87A71239D10 /* ExportService.swift */; };
@@ -58,6 +59,7 @@
 		A6C93F7462D5C0BD68900D13 /* HabitsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HabitsView.swift; sourceTree = "<group>"; };
 		B24FD058B7D00E7C9D29DA78 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
 		D01EBFA456712515A8DC008C /* IdeaCanvasView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IdeaCanvasView.swift; sourceTree = "<group>"; };
+		E4EE5D477AB5624DD9F40103 /* ImportServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportServiceTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -95,6 +97,7 @@
 		AF6357FC3CFD2962A4B84D7C /* OrbitTests */ = {
 			isa = PBXGroup;
 			children = (
+				E4EE5D477AB5624DD9F40103 /* ImportServiceTests.swift */,
 				02F7E45F3FFC1304FBF4D383 /* TaskCompletionServiceTests.swift */,
 			);
 			path = OrbitTests;
@@ -271,6 +274,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1422A0758899739CFAF25423 /* ImportServiceTests.swift in Sources */,
 				C84CD846CA563A5CF677B913 /* TaskCompletionServiceTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
