@@ -1,0 +1,36 @@
+name: Orbit
+options:
+  bundleIdPrefix: com.orbit
+  deploymentTarget:
+    macOS: "14.0"
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    MACOSX_DEPLOYMENT_TARGET: "14.0"
+    GENERATE_INFOPLIST_FILE: YES
+    INFOPLIST_KEY_CFBundleDisplayName: Orbit
+    INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.productivity
+    MARKETING_VERSION: "1.0.0"
+    CURRENT_PROJECT_VERSION: "1"
+targets:
+  Orbit:
+    type: application
+    platform: macOS
+    sources:
+      - Orbit
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.orbit.desktop
+        PRODUCT_NAME: Orbit
+        CODE_SIGN_STYLE: Automatic
+        ENABLE_HARDENED_RUNTIME: YES
+  OrbitTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - OrbitTests
+    dependencies:
+      - target: Orbit
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.orbit.desktop.tests
