@@ -19,6 +19,8 @@ struct IdeaCanvasView: View {
     @State private var committedZoom: CGFloat = 1
     @State private var selectedIdeaID: UUID?
     @State private var connectionSourceID: UUID?
+    @State private var connectionStart: CGPoint?
+    @State private var connectionEnd: CGPoint?
     @State private var mergeCandidate: MergeCandidate?
 
     var body: some View {
@@ -40,6 +42,8 @@ struct IdeaCanvasView: View {
 
                     CanvasEdges(ideas: ideas, links: links, pan: pan, zoom: zoom)
                         .allowsHitTesting(false)
+                    CanvasConnectionPreview(start: connectionStart, end: connectionEnd)
+                        .allowsHitTesting(false)
 
                     ForEach(ideas) { idea in
                         CanvasIdeaNode(
@@ -47,9 +51,11 @@ struct IdeaCanvasView: View {
                             zoom: zoom,
                             pan: pan,
                             selected: selectedIdeaID == idea.id,
-                            connecting: connectionSourceID == idea.id,
-                            select: { selectOrConnect(to: idea) },
-                            beginConnection: { beginConnection(from: idea) },
+                            select: { selectedIdeaID = idea.id },
+                            connectionChanged: { start, end in
+                                connectionSourceID = idea.id; connectionStart = start; connectionEnd = end
+                            },
+                            connectionEnded: { end in finishConnection(from: idea, at: end) },
                             moved: { nodeMoved(idea) }
                         )
                     }
@@ -57,20 +63,6 @@ struct IdeaCanvasView: View {
                     canvasControls
                         .padding(18)
 
-                    if let connectionSourceID,
-                       let source = ideas.first(where: { $0.id == connectionSourceID }) {
-                        HStack(spacing: 8) {
-                            Image(systemName: "point.topleft.down.to.point.bottomright.curvepath")
-                            Text("Linking from \(source.title.isEmpty ? "Untitled" : source.title). Choose another idea.")
-                            Button("Cancel") { self.connectionSourceID = nil }.buttonStyle(.plain).foregroundStyle(OrbitTheme.accent)
-                        }
-                        .font(.system(size: 11.5, weight: .medium))
-                        .padding(.horizontal, 12).padding(.vertical, 9)
-                        .background(OrbitTheme.surface(scheme), in: Capsule())
-                        .overlay { Capsule().stroke(OrbitTheme.line(scheme)) }
-                        .shadow(color: .black.opacity(0.05), radius: 4, y: 2)
-                        .padding(.top, 18).frame(maxWidth: .infinity)
-                    }
                 }
                 .clipped()
                 .onDeleteCommand { deleteSelected() }
@@ -173,21 +165,19 @@ struct IdeaCanvasView: View {
         try? modelContext.save()
     }
 
-    private func beginConnection(from idea: Idea) {
-        selectedIdeaID = idea.id
-        connectionSourceID = connectionSourceID == idea.id ? nil : idea.id
-    }
-
-    private func selectOrConnect(to idea: Idea) {
-        guard let sourceID = connectionSourceID else { selectedIdeaID = idea.id; return }
-        guard sourceID != idea.id else { connectionSourceID = nil; return }
-        let duplicate = links.contains {
-            ($0.ideaAID == sourceID && $0.ideaBID == idea.id) || ($0.ideaAID == idea.id && $0.ideaBID == sourceID)
+    private func finishConnection(from source: Idea, at screenPoint: CGPoint) {
+        let target = ideas.first { idea in
+            guard idea.id != source.id, let x = idea.canvasX, let y = idea.canvasY else { return false }
+            return CGRect(x: x * zoom + pan.width - 112 * zoom, y: y * zoom + pan.height - 59 * zoom, width: 224 * zoom, height: 118 * zoom).insetBy(dx: -10, dy: -10).contains(screenPoint)
         }
-        if !duplicate { modelContext.insert(IdeaLink(ideaAID: sourceID, ideaBID: idea.id)) }
+        defer { connectionSourceID = nil; connectionStart = nil; connectionEnd = nil }
+        guard let target else { return }
+        let duplicate = links.contains {
+            ($0.ideaAID == source.id && $0.ideaBID == target.id) || ($0.ideaAID == target.id && $0.ideaBID == source.id)
+        }
+        if !duplicate { modelContext.insert(IdeaLink(ideaAID: source.id, ideaBID: target.id)) }
         try? modelContext.save()
-        selectedIdeaID = idea.id
-        connectionSourceID = nil
+        selectedIdeaID = target.id
     }
 
     private func nodeMoved(_ idea: Idea) {
@@ -298,17 +288,31 @@ private struct CanvasEdges: View {
     }
 }
 
+private struct CanvasConnectionPreview: View {
+    let start: CGPoint?; let end: CGPoint?
+    var body: some View {
+        Canvas { context, _ in
+            guard let start, let end else { return }
+            let bend = max(34, abs(end.x - start.x) * 0.4)
+            var path = Path(); path.move(to: start)
+            path.addCurve(to: end, control1: CGPoint(x: start.x + (end.x >= start.x ? bend : -bend), y: start.y), control2: CGPoint(x: end.x - (end.x >= start.x ? bend : -bend), y: end.y))
+            context.stroke(path, with: .color(OrbitTheme.accent.opacity(0.72)), style: StrokeStyle(lineWidth: 2, lineCap: .round, dash: [6, 4]))
+        }
+    }
+}
+
 private struct CanvasIdeaNode: View {
     @Environment(\.colorScheme) private var scheme
     @Bindable var idea: Idea
     let zoom: CGFloat
     let pan: CGSize
     let selected: Bool
-    let connecting: Bool
     let select: () -> Void
-    let beginConnection: () -> Void
+    let connectionChanged: (CGPoint, CGPoint) -> Void
+    let connectionEnded: (CGPoint) -> Void
     let moved: () -> Void
     @State private var dragOrigin: CGPoint?
+    @State private var hovering = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -345,29 +349,33 @@ private struct CanvasIdeaNode: View {
                 .onEnded { _ in dragOrigin = nil; moved() }
         )
         .simultaneousGesture(TapGesture().onEnded(select))
+        .onHover { hovering = $0 }
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Idea: \(idea.title)")
         .accessibilityAddTraits(selected ? .isSelected : [])
-        .help(selected ? "Use a port to create a link" : "Select or drag to reposition")
+        .help("Drag a side port onto another idea to link")
     }
 
     @ViewBuilder private var connectionPorts: some View {
-        if selected {
+        if selected || hovering {
             ZStack {
-                port.offset(y: -59)
-                port.offset(x: 112)
-                port.offset(y: 59)
-                port.offset(x: -112)
+                port(offset: CGPoint(x: 0, y: -59)).offset(y: -59)
+                port(offset: CGPoint(x: 112, y: 0)).offset(x: 112)
+                port(offset: CGPoint(x: 0, y: 59)).offset(y: 59)
+                port(offset: CGPoint(x: -112, y: 0)).offset(x: -112)
             }
         }
     }
 
-    private var port: some View {
-        Circle().fill(connecting ? OrbitTheme.accent : OrbitTheme.surface(scheme))
-            .overlay { Circle().stroke(OrbitTheme.accent, lineWidth: 1.6) }
-            .frame(width: 11, height: 11).contentShape(Circle())
-            .onTapGesture(perform: beginConnection)
-            .accessibilityLabel(connecting ? "Cancel link" : "Start link")
+    private func port(offset: CGPoint) -> some View {
+        let center = CGPoint(x: (idea.canvasX ?? 200) * zoom + pan.width + offset.x * zoom, y: (idea.canvasY ?? 200) * zoom + pan.height + offset.y * zoom)
+        return Circle().fill(OrbitTheme.surface(scheme))
+            .overlay { Circle().stroke(OrbitTheme.accent, lineWidth: 2) }
+            .frame(width: 13, height: 13).contentShape(Circle().inset(by: -6))
+            .gesture(DragGesture(minimumDistance: 0, coordinateSpace: .global).onChanged { value in
+                connectionChanged(center, value.location)
+            }.onEnded { value in connectionEnded(value.location) })
+            .accessibilityLabel("Drag to connect idea")
     }
 }
 
