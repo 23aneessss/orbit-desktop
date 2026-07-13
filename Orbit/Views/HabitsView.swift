@@ -21,9 +21,19 @@ struct HabitsView: View {
                         .buttonStyle(.borderedProminent).tint(OrbitTheme.accent)
                 }
 
-                ForEach(habits) { habit in
-                    HabitCard(habit: habit, logs: logs.filter { $0.habit?.id == habit.id }) {
-                        toggleToday(habit)
+                if habits.isEmpty {
+                    VStack(spacing: 12) {
+                        Image(systemName: "flame").font(.system(size: 22)).foregroundStyle(OrbitTheme.accent)
+                            .frame(width: 50, height: 50).background(OrbitTheme.accentSoft(scheme), in: RoundedRectangle(cornerRadius: 14))
+                        Text("Build your first streak").font(.system(size: 17, weight: .semibold))
+                        Text("Create one small habit and mark the days you complete it.").font(.system(size: 12.5)).foregroundStyle(OrbitTheme.ink2(scheme))
+                        Button("Create a habit") { addHabit() }.buttonStyle(.borderedProminent).tint(OrbitTheme.accent)
+                    }.padding(48).frame(maxWidth: .infinity).orbitCard()
+                } else {
+                    ForEach(habits) { habit in
+                        HabitCard(habit: habit, logs: logs.filter { $0.habit?.id == habit.id }, toggleToday: { toggleToday(habit) }) { dateKey in
+                            toggle(habit, on: dateKey)
+                        }
                     }
                 }
             }
@@ -35,11 +45,14 @@ struct HabitsView: View {
     }
 
     private func toggleToday(_ habit: Habit) {
-        let today = OrbitDate.key()
-        if let existing = logs.first(where: { $0.habit?.id == habit.id && $0.dateKey == today }) {
+        toggle(habit, on: OrbitDate.key())
+    }
+
+    private func toggle(_ habit: Habit, on dateKey: String) {
+        if let existing = logs.first(where: { $0.habit?.id == habit.id && $0.dateKey == dateKey }) {
             modelContext.delete(existing)
         } else {
-            modelContext.insert(HabitLog(dateKey: today, habit: habit))
+            modelContext.insert(HabitLog(dateKey: dateKey, habit: habit))
         }
         try? modelContext.save()
     }
@@ -55,6 +68,7 @@ private struct HabitCard: View {
     let habit: Habit
     let logs: [HabitLog]
     let toggleToday: () -> Void
+    let toggleDate: (String) -> Void
 
     private var doneToday: Bool { logs.contains { $0.dateKey == OrbitDate.key() } }
     private var thisWeek: Int {
@@ -83,7 +97,7 @@ private struct HabitCard: View {
                 .buttonStyle(.borderedProminent).tint(doneToday ? accent : OrbitTheme.ink3(scheme))
             }
 
-            HeatmapView(dateKeys: Set(logs.map(\.dateKey)), accent: accent, weeks: 52)
+            HeatmapView(dateKeys: Set(logs.map(\.dateKey)), accent: accent, weeks: 52, toggleDate: toggleDate)
 
             HStack(spacing: 10) {
                 Text("This week").font(.system(size: 12.5)).foregroundStyle(OrbitTheme.ink2(scheme))
@@ -107,6 +121,7 @@ struct HeatmapView: View {
     let dateKeys: Set<String>
     let accent: Color
     let weeks: Int
+    var toggleDate: ((String) -> Void)? = nil
 
     var body: some View {
         HStack(alignment: .top, spacing: 3) {
@@ -126,10 +141,7 @@ struct HeatmapView: View {
                             ForEach(0..<7, id: \.self) { day in
                                 let offset = -((weeks - 1 - week) * 7 + (6 - day))
                                 let key = OrbitDate.key(OrbitDate.date(daysFromToday: offset))
-                                RoundedRectangle(cornerRadius: 2)
-                                    .fill(dateKeys.contains(key) ? accent : OrbitTheme.sunken(scheme))
-                                    .frame(width: cell, height: cell)
-                                    .help(key)
+                                heatmapCell(key: key, size: cell)
                             }
                         }
                     }
@@ -139,5 +151,19 @@ struct HeatmapView: View {
         }
         .frame(maxWidth: .infinity)
     }
-}
 
+    @ViewBuilder private func heatmapCell(key: String, size: CGFloat) -> some View {
+        let square = RoundedRectangle(cornerRadius: 2)
+            .fill(dateKeys.contains(key) ? accent : OrbitTheme.sunken(scheme))
+            .frame(width: size, height: size)
+        if let toggleDate {
+            Button { toggleDate(key) } label: { square }
+                .buttonStyle(.plain)
+                .help("\(key) · \(dateKeys.contains(key) ? "completed" : "not completed")")
+                .accessibilityLabel(key)
+                .accessibilityValue(dateKeys.contains(key) ? "Completed" : "Not completed")
+        } else {
+            square.help(key)
+        }
+    }
+}

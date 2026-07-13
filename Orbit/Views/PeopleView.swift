@@ -14,6 +14,7 @@ struct PeopleView: View {
     @Environment(\.colorScheme) private var scheme
     @Query(sort: \Contact.name) private var contacts: [Contact]
     @Query(sort: \Interaction.dateKey, order: .reverse) private var interactions: [Interaction]
+    @Binding var requestedContactID: UUID?
 
     @AppStorage("orbit:people-seeded") private var peopleSeeded = false
     @State private var query = ""
@@ -21,6 +22,10 @@ struct PeopleView: View {
     @State private var selectedContactID: UUID?
     @State private var editingContact: Contact?
     @State private var showingNewContact = false
+
+    init(requestedContactID: Binding<UUID?> = .constant(nil)) {
+        _requestedContactID = requestedContactID
+    }
 
     private var filteredContacts: [Contact] {
         contacts.filter { contact in
@@ -37,26 +42,36 @@ struct PeopleView: View {
     }
 
     var body: some View {
-        if let selectedContactID, let contact = contacts.first(where: { $0.id == selectedContactID }) {
-            PersonDetailView(
-                contact: contact,
-                interactions: interactions.filter { $0.contactID == selectedContactID },
-                close: { self.selectedContactID = nil },
-                edit: { editingContact = contact },
-                delete: { delete(contact) }
-            )
-            .sheet(item: $editingContact) { contact in
-                ContactFormView(contact: contact, isNew: false, onCancel: { editingContact = nil }, onSave: { _ in try? modelContext.save(); editingContact = nil })
-            }
-        } else {
-            browser
-                .task { seedPeopleIfNeeded() }
-                .sheet(isPresented: $showingNewContact) {
-                    ContactFormView(contact: Contact(name: ""), isNew: true, onCancel: { showingNewContact = false }) { contact in
-                        modelContext.insert(contact); try? modelContext.save(); showingNewContact = false; selectedContactID = contact.id
-                    }
+        Group {
+            if let selectedContactID, let contact = contacts.first(where: { $0.id == selectedContactID }) {
+                PersonDetailView(
+                    contact: contact,
+                    interactions: interactions.filter { $0.contactID == selectedContactID },
+                    close: { self.selectedContactID = nil },
+                    edit: { editingContact = contact },
+                    delete: { delete(contact) }
+                )
+                .sheet(item: $editingContact) { contact in
+                    ContactFormView(contact: contact, isNew: false, onCancel: { editingContact = nil }, onSave: { _ in try? modelContext.save(); editingContact = nil })
                 }
+            } else {
+                browser
+                    .task { seedPeopleIfNeeded() }
+                    .sheet(isPresented: $showingNewContact) {
+                        ContactFormView(contact: Contact(name: ""), isNew: true, onCancel: { showingNewContact = false }) { contact in
+                            modelContext.insert(contact); try? modelContext.save(); showingNewContact = false; selectedContactID = contact.id
+                        }
+                    }
+            }
         }
+        .onAppear { openRequestedContact() }
+        .onChange(of: requestedContactID) { openRequestedContact() }
+    }
+
+    private func openRequestedContact() {
+        guard let requestedContactID, contacts.contains(where: { $0.id == requestedContactID }) else { return }
+        selectedContactID = requestedContactID
+        self.requestedContactID = nil
     }
 
     private var browser: some View {

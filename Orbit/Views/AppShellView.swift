@@ -37,6 +37,8 @@ struct AppShellView: View {
     @AppStorage("orbit:accent") private var accentHex = "#8B5CF6"
     @State private var selection: OrbitSection = .home
     @State private var commandPalettePresented = false
+    @State private var requestedIdeaID: UUID?
+    @State private var requestedContactID: UUID?
 
     private var displayName: String {
         settings.first(where: { $0.key == "name" })?.value ?? ""
@@ -70,7 +72,7 @@ struct AppShellView: View {
             commandPalettePresented = true
         }
         .sheet(isPresented: $commandPalettePresented) {
-            CommandPaletteView(selection: $selection, isPresented: $commandPalettePresented)
+            CommandPaletteView(selection: $selection, isPresented: $commandPalettePresented, requestedIdeaID: $requestedIdeaID, requestedContactID: $requestedContactID)
         }
     }
 
@@ -224,9 +226,9 @@ struct AppShellView: View {
         case .home: HomeView(name: displayName, navigate: { selection = $0 })
         case .habits: HabitsView()
         case .canvas: IdeaCanvasView()
-        case .ideas: IdeasView()
+        case .ideas: IdeasView(requestedIdeaID: $requestedIdeaID)
         case .tasks: TasksView()
-        case .people: PeopleView()
+        case .people: PeopleView(requestedContactID: $requestedContactID)
         case .settings: SettingsView()
         }
     }
@@ -279,6 +281,8 @@ private struct CommandPaletteView: View {
     @Query private var logs: [HabitLog]
     @Binding var selection: OrbitSection
     @Binding var isPresented: Bool
+    @Binding var requestedIdeaID: UUID?
+    @Binding var requestedContactID: UUID?
     @State private var query = ""
 
     private var results: [OrbitSection] {
@@ -318,13 +322,13 @@ private struct CommandPaletteView: View {
                     let matchingIdeas = ideas.filter { query.isEmpty || $0.title.localizedStandardContains(query) }
                     if !matchingIdeas.isEmpty {
                         paletteHeader("IDEAS")
-                        ForEach(matchingIdeas.prefix(8)) { idea in paletteButton(idea.title.isEmpty ? "Untitled" : idea.title, symbol: "lightbulb") { selection = .ideas; isPresented = false } }
+                        ForEach(matchingIdeas.prefix(8)) { idea in paletteButton(idea.title.isEmpty ? "Untitled" : idea.title, symbol: "lightbulb") { requestedIdeaID = idea.id; selection = .ideas; isPresented = false } }
                     }
 
                     let matchingPeople = contacts.filter { query.isEmpty || $0.name.localizedStandardContains(query) }
                     if !matchingPeople.isEmpty {
                         paletteHeader("PEOPLE")
-                        ForEach(matchingPeople) { contact in paletteButton(contact.name, symbol: "person") { selection = .people; isPresented = false } }
+                        ForEach(matchingPeople) { contact in paletteButton(contact.name, symbol: "person") { requestedContactID = contact.id; selection = .people; isPresented = false } }
                     }
                 }.padding(10)
             }

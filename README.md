@@ -1,123 +1,111 @@
-# Orbit for macOS
+![Orbit connected workspace banner](docs/assets/readme-banner.png)
 
-Orbit is a local-first personal operating system for habits, connected ideas, visual workflows, tasks, and relationships. This repository is the native macOS recreation of Orbit 1.0, built with SwiftUI and SwiftData.
+<p align="center">
+  <img src="docs/assets/orbit-icon.png" width="112" height="112" alt="Orbit app icon">
+</p>
 
-The complete source-product specification is in [CAHIER_DES_CHARGES.md](CAHIER_DES_CHARGES.md). [PRODUCT.md](PRODUCT.md) captures the durable product principles for the native port.
+<h1 align="center">Orbit for macOS</h1>
 
-## Status
+<p align="center">
+  A private, local-first personal operating system for habits, connected ideas,<br>
+  visual workflows, tasks, and relationships.
+</p>
 
-The native product foundation and its core feature set are implemented and build successfully:
+<p align="center">
+  <img alt="macOS 14+" src="https://img.shields.io/badge/macOS-14%2B-8259F5?style=flat-square">
+  <img alt="SwiftUI" src="https://img.shields.io/badge/SwiftUI-native-20A8AD?style=flat-square">
+  <img alt="Local first" src="https://img.shields.io/badge/data-local--first-3D6DF2?style=flat-square">
+  <img alt="No telemetry" src="https://img.shields.io/badge/telemetry-none-10B981?style=flat-square">
+</p>
 
-- Native macOS window and persistent collapsible sidebar
-- Warm neutral Orbit visual foundation and accent system
-- Local SwiftData store with idempotent sample data
-- Home dashboard with live habit, idea, relationship, follow-up, and activity data
-- Habit list, contribution heatmaps, weekly progress, and today toggles
-- Searchable idea browser with tags, pinning, deletion, and a distraction-free 700 ms autosaving editor
-- `⌘K` command palette for navigation, creation, habit logging, and content lookup
-- Native idea canvas with a dot grid, pan, zoom, draggable nodes, persisted positions, accessible link ports, floating border-to-border Bézier edges, auto-tiling, deletion, and overlap merge reconciliation
-- Persistent task lists, hierarchical steps, recursive completion roll-up, directed workflow links, composite drill-down, freehand ink, and sticky notes
-- Relationship CRM with contact detail, favorites, interaction history, and follow-up states
-- Profile, light/dark/system appearance, custom accent colors, complete JSON export, and erase-all-data controls
-- Light and dark system appearance support
+Orbit brings the daily tools that usually live in separate apps into one focused Mac workspace. It preserves the structure and visual character of the original web application while replacing its browser stack with native SwiftUI, SwiftData, macOS menus, keyboard shortcuts, pointer interactions, and file panels.
 
-## Why React Flow is not required
+![Orbit home dashboard in dark mode](docs/assets/orbit-home-dark.png)
 
-React Flow is a React component and cannot be embedded directly in a native SwiftUI view. Orbit replaces it with a native scene architecture:
+## What Orbit includes
 
-1. Nodes and annotation points are stored in world-space coordinates.
-2. A viewport transform applies shared pan and zoom to the scene.
-3. Interactive nodes remain real SwiftUI views, preserving text rendering, focus, controls, and accessibility.
-4. Non-interactive edges, the dot grid, and future pen strokes use SwiftUI `Canvas` for efficient immediate-mode drawing.
-5. A small geometry layer computes floating edge attachment points at node borders.
-6. If very large boards outgrow SwiftUI rendering, the drawing layer can move to an `NSView` without changing the persisted model or product UI.
+- **Home:** daily progress, activity history, current streak, due follow-ups, and recent ideas.
+- **Habits:** interactive 52-week heatmaps, historical check-ins, weekly goals, and today actions.
+- **Ideas:** full-text and tag search, pinning, autosaving long-form editor, and local metadata.
+- **Canvas:** draggable idea cards, pan and zoom, hover connection ports, Bézier links, link deletion, and overlap merging.
+- **Tasks:** list and spatial board views, hierarchical steps, recursive completion, ink, and sticky notes.
+- **Workflows:** directed step graphs with native drag-to-connect ports and nested sub-workflows.
+- **People:** searchable personal CRM, favorites, follow-up queue, contact details, and interaction history.
+- **Command palette:** `⌘K` navigation, creation, habit logging, and direct opening of ideas or people.
+- **Ownership:** appearance settings, complete JSON backup and restore, and one-action local data removal.
 
-This is the native equivalent of the capabilities Orbit uses from React Flow. It also gives the app better macOS keyboard, pointer, accessibility, and persistence integration.
+## A native replacement for React Flow
 
-## Open and run
+React Flow is a React component, so Orbit recreates its relevant behavior with a native scene architecture:
 
-The checked-in Xcode project is generated from `project.yml` with XcodeGen.
+1. Nodes, notes, and ink points are persisted in world-space coordinates.
+2. A shared viewport transform applies pan and zoom.
+3. Nodes remain real SwiftUI views for sharp text, controls, hover, focus, and accessibility.
+4. Dot grids, edges, connection previews, and pen strokes render efficiently through SwiftUI `Canvas`.
+5. Geometry helpers attach Bézier curves to node borders and provide forgiving invisible hit targets.
+6. Dragging a visible port creates a link; clicking a link selects it for deletion.
 
-```sh
-open Orbit.xcodeproj
-```
+This keeps the central Orbit workflow intact without embedding a web view or depending on React.
 
-Select the `Orbit` scheme and run on **My Mac**.
+## Privacy and portability
 
-To regenerate and verify from the command line:
+Orbit has no account, server dependency, analytics, or telemetry. Personal content is stored in a local SwiftData container. A complete, human-readable JSON backup can be exported and restored from **Settings → Data**.
 
-```sh
-xcodegen generate
-xcodebuild -project Orbit.xcodeproj -scheme Orbit -configuration Debug -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO build
-```
+## Run locally
 
 Requirements:
 
 - macOS 14 Sonoma or later
-- Xcode 15.0 or later
-- XcodeGen when regenerating the project
+- Xcode 15 or later
+- [XcodeGen](https://github.com/yonaskolb/XcodeGen) when regenerating the project
+
+```sh
+git clone <repository-url>
+cd orbit-desktop
+xcodegen generate
+open Orbit.xcodeproj
+```
+
+Select the **Orbit** scheme and run on **My Mac**.
+
+Command-line verification:
+
+```sh
+xcodegen generate
+xcodebuild test \
+  -project Orbit.xcodeproj \
+  -scheme Orbit \
+  -destination 'platform=macOS' \
+  CODE_SIGNING_ALLOWED=NO
+```
 
 ## Architecture
 
 ```text
 Orbit/
-├── App/          App entry point, model container, menu commands
+├── App/          Application entry point and menu commands
+├── Assets.xcassets/
+│   └── AppIcon   Complete Retina macOS icon catalog
 ├── Design/       Theme tokens and shared surface styling
 ├── Models/       SwiftData entities
-├── Services/     Local seed and future import/export services
-├── Utilities/    Date and business-logic helpers
+├── Services/     Seeding, JSON export, and validated restore
+├── Utilities/    Date and task-completion business logic
 └── Views/        App shell and feature screens
 ```
 
-All application data stays in SwiftData's local SQLite-backed store. UI-only preferences such as sidebar collapse remain in `UserDefaults`. There are no network dependencies.
+The project has no third-party runtime dependency. `project.yml` is the source of truth for the generated Xcode project.
 
-## Parity roadmap
+## Project references
 
-### Phase 1: foundation and risk proof
+- [Product principles](PRODUCT.md)
+- [Design system](DESIGN.md)
+- [Complete source specification](CAHIER_DES_CHARGES.md)
 
-- [x] Native project and app shell
-- [x] Product/design foundations
-- [x] SwiftData proof
-- [x] Home and Habits vertical slice
-- [x] Native canvas pan, zoom, drag, persistence, and edges
-- [x] Canvas connection ports, selection, deletion, auto-tiling, and merge flow
-- [ ] Canvas keyboard navigation and large-board performance tests
+## Release profile
 
-### Phase 2: Ideas
-
-- [x] Searchable idea browser, tags, pinning, and deletion
-- [x] Distraction-free editor with 700 ms autosave
-- [x] Canvas double-click creation at pointer position
-- [x] Link normalization and duplicate protection
-- [x] Overlap-based idea merge with link reconciliation
-
-### Phase 3: Tasks and workflows
-
-- [x] Task list
-- [x] Spatial task board with persisted positions, auto-tiling, task states, and annotations
-- [x] Hierarchical steps and memoized completion roll-up
-- [x] Directed workflow links
-- [x] Composite workflow drill-down
-- [x] Pen strokes, sticky notes, selection, undo, and deletion
-- [ ] Shared board viewport engine extracted from the idea canvas
-
-### Phase 4: People and daily operating loop
-
-- [x] Contact browser and detail views
-- [x] Interaction timeline and follow-up states
-- [x] Complete Home follow-up and recent-idea panels
-- [x] Full command palette actions and habit logging
-
-### Phase 5: ownership and parity hardening
-
-- [x] Theme and accent settings
-- [x] Complete JSON export and erase-all-data flow
-- [ ] JSON import with conflict handling
-- [ ] Empty, error, and rollback states
-- [ ] VoiceOver, keyboard, focus, reduced-motion, and contrast audit
-- [ ] Performance testing with large datasets and canvases
-- [ ] Visual comparison pass against every source screen
-
-## Definition of exact recreation
-
-Exact recreation is achievable at the product level: the same information architecture, data behavior, canvas workflows, visual hierarchy, and keyboard-first operating model. Some implementation details should intentionally be native equivalents, such as SF Symbols instead of Lucide icons, SwiftData instead of Drizzle, macOS menus and file panels instead of browser dialogs, and the custom scene layer instead of React Flow.
+- Bundle identifier: `com.orbit.desktop`
+- Product version: `1.0.0`
+- Minimum deployment: macOS 14.0
+- Storage: SwiftData, local only
+- Network access: not required
+- App category: Productivity

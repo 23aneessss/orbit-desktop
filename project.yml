@@ -24,6 +24,7 @@ targets:
         PRODUCT_NAME: Orbit
         CODE_SIGN_STYLE: Automatic
         ENABLE_HARDENED_RUNTIME: YES
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
   OrbitTests:
     type: bundle.unit-test
     platform: macOS

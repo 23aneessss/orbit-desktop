@@ -23,6 +23,16 @@ struct HomeView: View {
             .sorted { ($0.nextFollowUpKey ?? "") < ($1.nextFollowUpKey ?? "") }
     }
 
+    private var featuredHabit: Habit? { habits.first }
+
+    private var currentStreak: Int {
+        guard let habit = featuredHabit else { return 0 }
+        let completed = Set(logs.filter { $0.habit?.id == habit.id }.map(\.dateKey))
+        var streak = 0
+        while completed.contains(OrbitDate.key(OrbitDate.date(daysFromToday: -streak))) { streak += 1 }
+        return streak
+    }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 26) {
@@ -35,7 +45,7 @@ struct HomeView: View {
                 }
 
                 HStack(spacing: 16) {
-                    StatCard(icon: "flame", label: "Current streak", value: "1 days", note: "Deep work") { navigate(.habits) }
+                    StatCard(icon: "flame", label: "Current streak", value: "\(currentStreak) \(currentStreak == 1 ? "day" : "days")", note: featuredHabit?.name ?? "Start a habit") { navigate(.habits) }
                     StatCard(icon: "calendar.badge.checkmark", label: "Today", value: "\(todayCount)/\(habits.count)", note: "habits completed") { navigate(.habits) }
                     StatCard(icon: "lightbulb", label: "Ideas", value: "\(ideas.count)", note: "captured locally") { navigate(.ideas) }
                     StatCard(icon: "person.2", label: "People", value: "\(contacts.count)", note: "\(dueContacts.count) follow-ups due") { navigate(.people) }

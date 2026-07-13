@@ -8,14 +8,15 @@
 
 /* Begin PBXBuildFile section */
 		0B108A04325E375330215A8F /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 495DCA72659439056D676B45 /* HomeView.swift */; };
+		0C0F9C5BC526F88FEF38E9DE /* ImportService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 51C75835C9455A83B47B5E64 /* ImportService.swift */; };
 		0E7452D1BDAB765F61F97BC1 /* IdeasView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0932C8BD5D10F4ACA0F61536 /* IdeasView.swift */; };
 		2375987409E9D494F95E95BA /* DateUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1AE6983885089AF77C700BD0 /* DateUtils.swift */; };
 		2B4A710673B3F7E20419E08F /* TasksView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 46E8F8129B179906DA04E4B1 /* TasksView.swift */; };
 		30CB47074901942DD762E6DD /* ExportService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E423F1AAC47A87A71239D10 /* ExportService.swift */; };
+		33335E4F882F977DFA66C647 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 20936134E6681D18358932B7 /* Assets.xcassets */; };
 		46F48D553FD3ABE560B624F5 /* OrbitTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66D0C8FB4C74F5AC31C6D25F /* OrbitTheme.swift */; };
 		567604D291F59AED5CA123E8 /* TaskCompletionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 528B3CA5A15B87580BF57635 /* TaskCompletionService.swift */; };
 		7C8B5DFF0911F41E6BF9FA4D /* PeopleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BBF9172C28578B7EBBFC4A3 /* PeopleView.swift */; };
-		8833B1DB54AAEC30B6AE6A8B /* PlaceholderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A405F984F70075EDF72F7D4 /* PlaceholderView.swift */; };
 		B453DEBCA4D678859B1058AD /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E37DA3D4A718D5948DEF3A7 /* SettingsView.swift */; };
 		C84CD846CA563A5CF677B913 /* TaskCompletionServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02F7E45F3FFC1304FBF4D383 /* TaskCompletionServiceTests.swift */; };
 		CA6E9744FE03121F63830BC5 /* HabitsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6C93F7462D5C0BD68900D13 /* HabitsView.swift */; };
@@ -39,13 +40,14 @@
 /* Begin PBXFileReference section */
 		02F7E45F3FFC1304FBF4D383 /* TaskCompletionServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskCompletionServiceTests.swift; sourceTree = "<group>"; };
 		0932C8BD5D10F4ACA0F61536 /* IdeasView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IdeasView.swift; sourceTree = "<group>"; };
-		1A405F984F70075EDF72F7D4 /* PlaceholderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaceholderView.swift; sourceTree = "<group>"; };
 		1AE6983885089AF77C700BD0 /* DateUtils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DateUtils.swift; sourceTree = "<group>"; };
+		20936134E6681D18358932B7 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		46E8F8129B179906DA04E4B1 /* TasksView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TasksView.swift; sourceTree = "<group>"; };
 		495DCA72659439056D676B45 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
 		4BBF9172C28578B7EBBFC4A3 /* PeopleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PeopleView.swift; sourceTree = "<group>"; };
 		4E37DA3D4A718D5948DEF3A7 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		4E423F1AAC47A87A71239D10 /* ExportService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExportService.swift; sourceTree = "<group>"; };
+		51C75835C9455A83B47B5E64 /* ImportService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportService.swift; sourceTree = "<group>"; };
 		528B3CA5A15B87580BF57635 /* TaskCompletionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskCompletionService.swift; sourceTree = "<group>"; };
 		5DFA77B4FD4DF15BC26FEA45 /* OrbitApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrbitApp.swift; sourceTree = "<group>"; };
 		66D0C8FB4C74F5AC31C6D25F /* OrbitTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrbitTheme.swift; sourceTree = "<group>"; };
@@ -62,6 +64,7 @@
 		00ECA7FF55D55998AD25B1CA /* Orbit */ = {
 			isa = PBXGroup;
 			children = (
+				20936134E6681D18358932B7 /* Assets.xcassets */,
 				C780FD695A6D5038F772063E /* App */,
 				CD0EBA264946CA289F19D651 /* Design */,
 				67396201ACDD149AA1629C59 /* Models */,
@@ -106,7 +109,6 @@
 				D01EBFA456712515A8DC008C /* IdeaCanvasView.swift */,
 				0932C8BD5D10F4ACA0F61536 /* IdeasView.swift */,
 				4BBF9172C28578B7EBBFC4A3 /* PeopleView.swift */,
-				1A405F984F70075EDF72F7D4 /* PlaceholderView.swift */,
 				4E37DA3D4A718D5948DEF3A7 /* SettingsView.swift */,
 				46E8F8129B179906DA04E4B1 /* TasksView.swift */,
 			);
@@ -151,6 +153,7 @@
 			isa = PBXGroup;
 			children = (
 				4E423F1AAC47A87A71239D10 /* ExportService.swift */,
+				51C75835C9455A83B47B5E64 /* ImportService.swift */,
 				A3B93F37C0E112C39B3A0891 /* SeedService.swift */,
 			);
 			path = Services;
@@ -182,6 +185,7 @@
 			buildConfigurationList = 1ED43C45F010E6E18A4680AC /* Build configuration list for PBXNativeTarget "Orbit" */;
 			buildPhases = (
 				1A83EACBC247740EBC0E6135 /* Sources */,
+				744EABC5C142532226634E12 /* Resources */,
 			);
 			buildRules = (
 			);
@@ -228,6 +232,17 @@
 		};
 /* End PBXProject section */
 
+/* Begin PBXResourcesBuildPhase section */
+		744EABC5C142532226634E12 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				33335E4F882F977DFA66C647 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
 /* Begin PBXSourcesBuildPhase section */
 		1A83EACBC247740EBC0E6135 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
@@ -240,11 +255,11 @@
 				0B108A04325E375330215A8F /* HomeView.swift in Sources */,
 				F03996CBB18D50F3F5DC0948 /* IdeaCanvasView.swift in Sources */,
 				0E7452D1BDAB765F61F97BC1 /* IdeasView.swift in Sources */,
+				0C0F9C5BC526F88FEF38E9DE /* ImportService.swift in Sources */,
 				CC6551206571FF3F046080C5 /* Models.swift in Sources */,
 				E65C66D700AE1B182DC8BC7B /* OrbitApp.swift in Sources */,
 				46F48D553FD3ABE560B624F5 /* OrbitTheme.swift in Sources */,
 				7C8B5DFF0911F41E6BF9FA4D /* PeopleView.swift in Sources */,
-				8833B1DB54AAEC30B6AE6A8B /* PlaceholderView.swift in Sources */,
 				F2B8261C6ABC92342017674C /* SeedService.swift in Sources */,
 				B453DEBCA4D678859B1058AD /* SettingsView.swift in Sources */,
 				567604D291F59AED5CA123E8 /* TaskCompletionService.swift in Sources */,

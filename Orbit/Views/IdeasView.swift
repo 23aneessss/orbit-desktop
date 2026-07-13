@@ -5,10 +5,15 @@ struct IdeasView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.colorScheme) private var scheme
     @Query(sort: \Idea.updatedAt, order: .reverse) private var ideas: [Idea]
+    @Binding var requestedIdeaID: UUID?
 
     @State private var query = ""
     @State private var selectedTag: String?
     @State private var selectedIdeaID: UUID?
+
+    init(requestedIdeaID: Binding<UUID?> = .constant(nil)) {
+        _requestedIdeaID = requestedIdeaID
+    }
 
     private var filteredIdeas: [Idea] {
         ideas.filter { idea in
@@ -29,11 +34,21 @@ struct IdeasView: View {
     }
 
     var body: some View {
-        if let selectedIdeaID, let idea = ideas.first(where: { $0.id == selectedIdeaID }) {
-            IdeaEditorView(idea: idea) { self.selectedIdeaID = nil }
-        } else {
-            browser
+        Group {
+            if let selectedIdeaID, let idea = ideas.first(where: { $0.id == selectedIdeaID }) {
+                IdeaEditorView(idea: idea) { self.selectedIdeaID = nil }
+            } else {
+                browser
+            }
         }
+        .onAppear { openRequestedIdea() }
+        .onChange(of: requestedIdeaID) { openRequestedIdea() }
+    }
+
+    private func openRequestedIdea() {
+        guard let requestedIdeaID, ideas.contains(where: { $0.id == requestedIdeaID }) else { return }
+        selectedIdeaID = requestedIdeaID
+        self.requestedIdeaID = nil
     }
 
     private var browser: some View {

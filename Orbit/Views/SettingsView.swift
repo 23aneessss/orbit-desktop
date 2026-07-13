@@ -34,6 +34,7 @@ struct SettingsView: View {
     @State private var nameDraft = ""
     @State private var customAccent = OrbitTheme.accent
     @State private var showingWipeConfirmation = false
+    @State private var showingImportConfirmation = false
     @State private var exportMessage: String?
 
     var body: some View {
@@ -64,6 +65,10 @@ struct SettingsView: View {
             Button("Erase everything", role: .destructive) { wipeAllData() }
             Button("Cancel", role: .cancel) { }
         } message: { Text("Habits, ideas, tasks, people, and their history will be removed. Profile and appearance settings are preserved.") }
+        .confirmationDialog("Restore an Orbit backup?", isPresented: $showingImportConfirmation, titleVisibility: .visible) {
+            Button("Choose backup and replace data", role: .destructive) { importData() }
+            Button("Cancel", role: .cancel) { }
+        } message: { Text("Orbit validates the selected JSON file before replacing current personal content.") }
     }
 
     @ViewBuilder private var sectionContent: some View {
@@ -122,8 +127,11 @@ struct SettingsView: View {
             }
             VStack(alignment: .leading, spacing: 10) {
                 Text("Export").font(.system(size: 15, weight: .semibold))
-                Text("Create a complete JSON snapshot that can be inspected without Orbit.").font(.system(size: 12.5)).foregroundStyle(OrbitTheme.ink2(scheme))
-                Button { exportData() } label: { Label("Export JSON", systemImage: "square.and.arrow.up") }.buttonStyle(.bordered)
+                Text("Create a portable JSON backup, or restore one previously exported by Orbit.").font(.system(size: 12.5)).foregroundStyle(OrbitTheme.ink2(scheme))
+                HStack {
+                    Button { exportData() } label: { Label("Export backup", systemImage: "square.and.arrow.up") }.buttonStyle(.bordered)
+                    Button { showingImportConfirmation = true } label: { Label("Restore backup", systemImage: "square.and.arrow.down") }.buttonStyle(.bordered)
+                }
                 if let exportMessage { Text(exportMessage).font(.system(size: 11.5)).foregroundStyle(exportMessage.hasPrefix("Could") ? OrbitTheme.rose : OrbitTheme.emerald) }
             }.padding(20).orbitCard()
             VStack(alignment: .leading, spacing: 10) {
@@ -142,7 +150,7 @@ struct SettingsView: View {
             }
             Text("All data is stored locally in Orbit's SwiftData container. The app performs no telemetry and requires no account.")
                 .font(.system(size: 13)).foregroundStyle(OrbitTheme.ink2(scheme)).frame(maxWidth: 560, alignment: .leading)
-            Text("Roadmap: richer markdown, native follow-up reminders, and the Pixel companion.").font(.system(size: 12.5)).foregroundStyle(OrbitTheme.ink3(scheme))
+            Label("Native macOS app · SwiftUI + SwiftData", systemImage: "apple.logo").font(.system(size: 12.5)).foregroundStyle(OrbitTheme.ink3(scheme))
         }.padding(22).orbitCard()
     }
 
@@ -158,6 +166,7 @@ struct SettingsView: View {
     private func saveSetting(_ key: String, value: String) { if let existing = settings.first(where: { $0.key == key }) { existing.value = value } else { modelContext.insert(AppSetting(key: key, value: value)) }; try? modelContext.save() }
     private func setAccent(_ hex: String) { accentHex = hex; saveSetting("accent", value: hex) }
     private func exportData() { do { try ExportService.export(habits: habits, habitLogs: logs, ideas: ideas, ideaLinks: ideaLinks, tasks: tasks, taskSteps: steps, stepLinks: stepLinks, boardStrokes: boardStrokes, boardNotes: boardNotes, contacts: contacts, interactions: interactions, settings: settings); exportMessage = "Export finished." } catch { exportMessage = "Could not export: \(error.localizedDescription)" } }
+    private func importData() { do { if let summary = try ImportService.restore(into: modelContext) { exportMessage = summary.message } } catch { exportMessage = "Could not restore: \(error.localizedDescription)" } }
     private func wipeAllData() {
         logs.forEach(modelContext.delete); habits.forEach(modelContext.delete); ideaLinks.forEach(modelContext.delete); ideas.forEach(modelContext.delete); stepLinks.forEach(modelContext.delete); boardStrokes.forEach(modelContext.delete); boardNotes.forEach(modelContext.delete); steps.forEach(modelContext.delete); tasks.forEach(modelContext.delete); interactions.forEach(modelContext.delete); contacts.forEach(modelContext.delete); try? modelContext.save()
         UserDefaults.standard.set(true, forKey: "orbit:tasks-seeded"); UserDefaults.standard.set(true, forKey: "orbit:people-seeded")
