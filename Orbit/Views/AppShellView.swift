@@ -64,7 +64,7 @@ struct AppShellView: View {
         .background(OrbitTheme.canvas(scheme))
         .foregroundStyle(OrbitTheme.ink(scheme))
         .preferredColorScheme(preferredColorScheme)
-        .id("\(themePreference)-\(accentHex)")
+        .animation(.easeOut(duration: 0.22), value: sidebarCollapsed)
         .task { SeedService.seedIfNeeded(context: modelContext) }
         .onReceive(NotificationCenter.default.publisher(for: .openCommandPalette)) { _ in
             commandPalettePresented = true
@@ -76,23 +76,25 @@ struct AppShellView: View {
 
     private var sidebar: some View {
         VStack(spacing: 0) {
-            HStack(spacing: 12) {
-                OrbitLogo()
-                if !sidebarCollapsed {
-                    Text("Orbit").font(.system(size: 18, weight: .semibold))
+            if sidebarCollapsed {
+                VStack(spacing: 10) {
+                    OrbitLogo()
+                    sidebarToggle
+                }
+                .padding(.top, 14)
+                .frame(height: 92, alignment: .top)
+                .transition(.opacity)
+            } else {
+                HStack(spacing: 12) {
+                    OrbitLogo()
+                    Text("Orbit").font(.system(size: 18, weight: .semibold)).transition(.opacity.combined(with: .move(edge: .leading)))
                     Spacer()
+                    sidebarToggle
                 }
-                Button {
-                    withAnimation(.easeOut(duration: 0.18)) { sidebarCollapsed.toggle() }
-                } label: {
-                    Image(systemName: sidebarCollapsed ? "sidebar.left" : "sidebar.leading")
-                }
-                .buttonStyle(.plain)
-                .foregroundStyle(OrbitTheme.ink3(scheme))
-                .help(sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar")
+                .padding(.horizontal, 16)
+                .frame(height: 64)
+                .transition(.opacity)
             }
-            .padding(.horizontal, sidebarCollapsed ? 18 : 16)
-            .frame(height: 64)
 
             Button { commandPalettePresented = true } label: {
                 HStack(spacing: 11) {
@@ -154,6 +156,21 @@ struct AppShellView: View {
             }
         }
         .background(OrbitTheme.canvas(scheme))
+        .clipped()
+    }
+
+    private var sidebarToggle: some View {
+        Button {
+            withAnimation(.easeOut(duration: 0.22)) { sidebarCollapsed.toggle() }
+        } label: {
+            Image(systemName: sidebarCollapsed ? "sidebar.right" : "sidebar.leading")
+                .font(.system(size: 14, weight: .medium))
+                .frame(width: 28, height: 28)
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(OrbitTheme.ink3(scheme))
+        .help(sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar")
+        .accessibilityLabel(sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar")
     }
 
     private func sidebarItem(_ section: OrbitSection) -> some View {

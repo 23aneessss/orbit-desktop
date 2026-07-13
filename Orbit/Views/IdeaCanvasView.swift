@@ -53,7 +53,7 @@ struct IdeaCanvasView: View {
                             selected: selectedIdeaID == idea.id,
                             select: { selectedIdeaID = idea.id },
                             connectionChanged: { start, end in
-                                connectionSourceID = idea.id; connectionStart = start; connectionEnd = end
+                                selectedIdeaID = idea.id; connectionSourceID = idea.id; connectionStart = start; connectionEnd = end
                             },
                             connectionEnded: { end in finishConnection(from: idea, at: end) },
                             moved: { nodeMoved(idea) }
@@ -105,18 +105,20 @@ struct IdeaCanvasView: View {
     }
 
     private var canvasControls: some View {
-        VStack(spacing: 0) {
-            Button { setZoom(zoom * 1.2) } label: { Image(systemName: "plus") }.help("Zoom in")
-            Divider()
-            Button { setZoom(zoom / 1.2) } label: { Image(systemName: "minus") }.help("Zoom out")
-            Divider()
-            Button { resetViewport() } label: { Image(systemName: "arrow.up.left.and.arrow.down.right") }.help("Reset viewport")
+        HStack(spacing: 2) {
+            canvasControl("plus", help: "Zoom in") { setZoom(zoom * 1.2) }
+            canvasControl("minus", help: "Zoom out") { setZoom(zoom / 1.2) }
+            Divider().frame(height: 18).padding(.horizontal, 3)
+            canvasControl("arrow.up.left.and.arrow.down.right", help: "Reset viewport") { resetViewport() }
         }
-        .buttonStyle(.plain)
-        .frame(width: 38).padding(.vertical, 5)
-        .background(OrbitTheme.surface(scheme), in: RoundedRectangle(cornerRadius: 9))
-        .overlay { RoundedRectangle(cornerRadius: 9).stroke(OrbitTheme.line(scheme)) }
-        .shadow(color: .black.opacity(0.06), radius: 4, y: 2)
+        .padding(5).background(OrbitTheme.surface(scheme), in: RoundedRectangle(cornerRadius: 10))
+        .overlay { RoundedRectangle(cornerRadius: 10).stroke(OrbitTheme.line(scheme)) }
+        .shadow(color: .black.opacity(0.06), radius: 6, y: 3).fixedSize()
+    }
+
+    private func canvasControl(_ symbol: String, help: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) { Image(systemName: symbol).frame(width: 28, height: 28) }
+            .buttonStyle(.plain).background(Color.clear, in: RoundedRectangle(cornerRadius: 6)).help(help)
     }
 
     private var panGesture: some Gesture {
@@ -289,7 +291,7 @@ private struct CanvasEdges: View {
     }
 }
 
-private struct CanvasConnectionPreview: View {
+struct CanvasConnectionPreview: View {
     let start: CGPoint?; let end: CGPoint?
     var body: some View {
         Canvas { context, _ in
@@ -313,7 +315,6 @@ private struct CanvasIdeaNode: View {
     let connectionEnded: (CGPoint) -> Void
     let moved: () -> Void
     @State private var dragOrigin: CGPoint?
-    @State private var hovering = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -350,7 +351,6 @@ private struct CanvasIdeaNode: View {
                 .onEnded { _ in dragOrigin = nil; moved() }
         )
         .simultaneousGesture(TapGesture().onEnded(select))
-        .onHover { hovering = $0 }
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Idea: \(idea.title)")
         .accessibilityAddTraits(selected ? .isSelected : [])
@@ -358,7 +358,7 @@ private struct CanvasIdeaNode: View {
     }
 
     @ViewBuilder private var connectionPorts: some View {
-        if selected || hovering {
+        if selected {
             ZStack {
                 port(offset: CGPoint(x: 0, y: -59)).offset(y: -59)
                 port(offset: CGPoint(x: 112, y: 0)).offset(x: 112)
@@ -373,7 +373,7 @@ private struct CanvasIdeaNode: View {
         return Circle().fill(OrbitTheme.surface(scheme))
             .overlay { Circle().stroke(OrbitTheme.accent, lineWidth: 2) }
             .frame(width: 13, height: 13).contentShape(Circle().inset(by: -6))
-            .gesture(DragGesture(minimumDistance: 0, coordinateSpace: .named("ideaCanvas")).onChanged { value in
+            .highPriorityGesture(DragGesture(minimumDistance: 0, coordinateSpace: .named("ideaCanvas")).onChanged { value in
                 connectionChanged(center, value.location)
             }.onEnded { value in connectionEnded(value.location) })
             .accessibilityLabel("Drag to connect idea")

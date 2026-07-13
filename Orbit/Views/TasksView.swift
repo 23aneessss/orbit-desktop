@@ -176,33 +176,30 @@ private struct GlobalTaskBoardView: View {
     }
 
     private var boardToolbar: some View {
-        VStack(alignment: .leading, spacing: 9) {
-            HStack {
-                Text("Task board").font(.system(size: 13, weight: .semibold))
-                Spacer()
-                Picker("View", selection: Binding(get: { "board" }, set: { if $0 == "list" { showList() } })) {
-                    Text("List").tag("list"); Text("Board").tag("board")
-                }.pickerStyle(.segmented).frame(width: 130)
-                Button { create(nil) } label: { Image(systemName: "plus") }.buttonStyle(.borderedProminent).tint(OrbitTheme.accent).help("New task")
+        HStack(spacing: 6) {
+            ForEach(WorkflowTool.allCases) { item in
+                Button { tool = item } label: { Image(systemName: item.icon).frame(width: 28, height: 28) }
+                    .buttonStyle(.plain).background(tool == item ? OrbitTheme.accentSoft(scheme) : .clear, in: RoundedRectangle(cornerRadius: 7))
+                    .help(item.title).accessibilityLabel(item.title)
             }
-            HStack(spacing: 5) {
-                ForEach(WorkflowTool.allCases) { item in
-                    Button { tool = item } label: { Image(systemName: item.icon).frame(width: 24, height: 24) }
-                        .buttonStyle(.plain).background(tool == item ? OrbitTheme.accentSoft(scheme) : .clear, in: RoundedRectangle(cornerRadius: 7))
-                        .help(item.title).accessibilityLabel(item.title)
-                }
-                Divider().frame(height: 20).padding(.horizontal, 3)
-                ForEach(annotationColors, id: \.self) { color in
-                    Button { inkColor = color } label: {
-                        Circle().fill(Color(hex: color)).frame(width: 14, height: 14)
-                            .overlay { Circle().stroke(.primary.opacity(inkColor == color ? 0.65 : 0), lineWidth: 2) }
-                    }.buttonStyle(.plain)
-                }
-                Button { undoAnnotation() } label: { Image(systemName: "arrow.uturn.backward") }.buttonStyle(.plain).padding(.leading, 4).help("Undo annotation")
+            Divider().frame(height: 22).padding(.horizontal, 3)
+            ForEach(annotationColors, id: \.self) { color in
+                Button { inkColor = color } label: {
+                    Circle().fill(Color(hex: color)).frame(width: 15, height: 15)
+                        .overlay { Circle().stroke(.primary.opacity(inkColor == color ? 0.65 : 0), lineWidth: 2).padding(-2) }
+                }.buttonStyle(.plain).frame(width: 22, height: 28)
             }
+            Button { undoAnnotation() } label: { Image(systemName: "arrow.uturn.backward").frame(width: 28, height: 28) }.buttonStyle(.plain).help("Undo annotation")
+            Divider().frame(height: 22).padding(.horizontal, 3)
+            Picker("View", selection: Binding(get: { "board" }, set: { if $0 == "list" { showList() } })) {
+                Text("List").tag("list"); Text("Board").tag("board")
+            }.labelsHidden().pickerStyle(.segmented).frame(width: 128)
+            Button { create(nil) } label: { Image(systemName: "plus").frame(width: 28, height: 28) }
+                .buttonStyle(.borderedProminent).controlSize(.small).tint(OrbitTheme.accent).help("New task")
         }
-        .padding(11).frame(width: 390).background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
-        .overlay { RoundedRectangle(cornerRadius: 12).stroke(OrbitTheme.line(scheme)) }.shadow(color: .black.opacity(0.08), radius: 9, y: 3).padding(18)
+        .padding(7).background(OrbitTheme.surface(scheme), in: RoundedRectangle(cornerRadius: 11))
+        .overlay { RoundedRectangle(cornerRadius: 11).stroke(OrbitTheme.line(scheme)) }
+        .shadow(color: .black.opacity(0.07), radius: 7, y: 3).fixedSize().padding(18)
     }
 
     private var annotationColors: [String] { ["#F59E0B", "#3D6DF2", "#10B981", "#F43F5E", "#8B5CF6", "#64748B"] }
@@ -462,6 +459,8 @@ private struct WorkflowCanvasView: View {
     @State private var committedZoom: CGFloat = 1
     @State private var selectedID: UUID?
     @State private var sourceID: UUID?
+    @State private var connectionStart: CGPoint?
+    @State private var connectionEnd: CGPoint?
     @State private var selectedNoteID: UUID?
     @State private var scopeID: UUID?
     @State private var tool: WorkflowTool = .hand
@@ -481,6 +480,7 @@ private struct WorkflowCanvasView: View {
                 WorkflowInkLayer(strokes: visibleStrokes, preview: activeStroke, previewColor: inkColor, pan: pan, zoom: zoom)
                     .allowsHitTesting(false)
                 WorkflowEdges(steps: visibleSteps, links: links, pan: pan, zoom: zoom).allowsHitTesting(false)
+                CanvasConnectionPreview(start: connectionStart, end: connectionEnd).allowsHitTesting(false)
                 ForEach(visibleNotes) { note in
                     WorkflowStickyNote(note: note, zoom: zoom, pan: pan, selected: selectedNoteID == note.id) {
                         selectedNoteID = note.id; selectedID = nil
@@ -494,8 +494,9 @@ private struct WorkflowCanvasView: View {
                         pan: pan,
                         selected: selectedID == step.id,
                         connecting: sourceID == step.id,
-                        select: { selectOrConnect(step) },
-                        link: { selectedID = step.id; sourceID = sourceID == step.id ? nil : step.id },
+                        select: { selectedID = step.id },
+                        connectionChanged: { start, end in selectedID = step.id; sourceID = step.id; connectionStart = start; connectionEnd = end },
+                        connectionEnded: { end in finishConnection(from: step, at: end) },
                         toggle: { toggle(step) },
                         open: { enter(step) },
                         moved: save
@@ -511,45 +512,38 @@ private struct WorkflowCanvasView: View {
                 workflowToolbar
             }
             .clipped()
+            .coordinateSpace(name: "workflowCanvas")
             .onDeleteCommand { deleteSelected() }
             .onExitCommand { if scopeID != nil { leaveScope() } else { tool = .hand } }
         }
     }
 
     private var workflowToolbar: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 6) {
-                Button { leaveScope() } label: { Image(systemName: "house") }.buttonStyle(.borderless).disabled(scopeID == nil)
-                Image(systemName: "chevron.right").font(.system(size: 9)).foregroundStyle(OrbitTheme.ink3(scheme))
-                Text(scopeID.flatMap { id in steps.first(where: { $0.id == id })?.title } ?? "Workflow")
-                    .font(.system(size: 12, weight: .semibold)).lineLimit(1)
-                Spacer(minLength: 12)
-                Button { addStep() } label: { Label("Add step", systemImage: "plus") }.buttonStyle(.borderedProminent).tint(OrbitTheme.accent)
+        HStack(spacing: 6) {
+            Button { leaveScope() } label: { Image(systemName: "house").frame(width: 28, height: 28) }.buttonStyle(.plain).disabled(scopeID == nil)
+            Image(systemName: "chevron.right").font(.system(size: 9)).foregroundStyle(OrbitTheme.ink3(scheme))
+            Text(scopeID.flatMap { id in steps.first(where: { $0.id == id })?.title } ?? "Workflow")
+                .font(.system(size: 12, weight: .semibold)).lineLimit(1).frame(maxWidth: 110, alignment: .leading)
+            Divider().frame(height: 22).padding(.horizontal, 3)
+            ForEach(WorkflowTool.allCases) { item in
+                Button { tool = item } label: { Image(systemName: item.icon).frame(width: 28, height: 28) }
+                    .buttonStyle(.plain).background(tool == item ? OrbitTheme.accentSoft(scheme) : Color.clear, in: RoundedRectangle(cornerRadius: 7))
+                    .help(item.title).accessibilityLabel(item.title)
             }
-            HStack(spacing: 5) {
-                ForEach(WorkflowTool.allCases) { item in
-                    Button { tool = item } label: { Image(systemName: item.icon).frame(width: 24, height: 24) }
-                        .buttonStyle(.plain)
-                        .background(tool == item ? OrbitTheme.accentSoft(scheme) : Color.clear, in: RoundedRectangle(cornerRadius: 7))
-                        .help(item.title)
-                        .accessibilityLabel(item.title)
-                }
-                Divider().frame(height: 20).padding(.horizontal, 3)
-                ForEach(["#F59E0B", "#3D6DF2", "#10B981", "#F43F5E", "#8B5CF6", "#64748B"], id: \.self) { color in
-                    Button { inkColor = color } label: {
-                        Circle().fill(Color(hex: color)).frame(width: 14, height: 14)
-                            .overlay { Circle().stroke(.primary.opacity(inkColor == color ? 0.65 : 0), lineWidth: 2) }
-                    }.buttonStyle(.plain).help("Ink color")
-                }
-                Button { undoAnnotation() } label: { Image(systemName: "arrow.uturn.backward") }
-                    .buttonStyle(.plain).padding(.leading, 5).help("Undo last annotation")
-                if sourceID != nil { Button("Cancel link") { sourceID = nil }.buttonStyle(.bordered) }
+            Divider().frame(height: 22).padding(.horizontal, 3)
+            ForEach(["#F59E0B", "#3D6DF2", "#10B981", "#F43F5E", "#8B5CF6", "#64748B"], id: \.self) { color in
+                Button { inkColor = color } label: {
+                    Circle().fill(Color(hex: color)).frame(width: 15, height: 15)
+                        .overlay { Circle().stroke(.primary.opacity(inkColor == color ? 0.65 : 0), lineWidth: 2).padding(-2) }
+                }.buttonStyle(.plain).frame(width: 22, height: 28).help("Ink color")
             }
+            Button { undoAnnotation() } label: { Image(systemName: "arrow.uturn.backward").frame(width: 28, height: 28) }.buttonStyle(.plain).help("Undo last annotation")
+            Divider().frame(height: 22).padding(.horizontal, 3)
+            Button { addStep() } label: { Label("Add step", systemImage: "plus") }.buttonStyle(.borderedProminent).controlSize(.small).tint(OrbitTheme.accent)
         }
-        .padding(11).frame(width: 360)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
-        .overlay { RoundedRectangle(cornerRadius: 12).stroke(OrbitTheme.line(scheme)) }
-        .shadow(color: .black.opacity(0.08), radius: 9, y: 3).padding(18)
+        .padding(7).background(OrbitTheme.surface(scheme), in: RoundedRectangle(cornerRadius: 11))
+        .overlay { RoundedRectangle(cornerRadius: 11).stroke(OrbitTheme.line(scheme)) }
+        .shadow(color: .black.opacity(0.07), radius: 7, y: 3).fixedSize().padding(18)
     }
 
     private var panGesture: some Gesture {
@@ -588,14 +582,18 @@ private struct WorkflowCanvasView: View {
         scopeID = step.id; resetViewport(); save()
     }
     private func leaveScope() { scopeID = nil; resetViewport() }
-    private func resetViewport() { pan = .zero; committedPan = .zero; zoom = 1; committedZoom = 1; selectedID = nil; selectedNoteID = nil; sourceID = nil }
-    private func selectOrConnect(_ step: OrbitTaskStep) {
-        guard let sourceID else { selectedID = step.id; return }
-        guard sourceID != step.id else { self.sourceID = nil; return }
-        if !links.contains(where: { $0.sourceID == sourceID && $0.targetID == step.id }) {
-            modelContext.insert(StepLink(taskID: task.id, sourceID: sourceID, targetID: step.id))
+    private func resetViewport() { pan = .zero; committedPan = .zero; zoom = 1; committedZoom = 1; selectedID = nil; selectedNoteID = nil; sourceID = nil; connectionStart = nil; connectionEnd = nil }
+    private func finishConnection(from source: OrbitTaskStep, at screenPoint: CGPoint) {
+        let target = visibleSteps.first { step in
+            guard step.id != source.id, let x = step.canvasX, let y = step.canvasY else { return false }
+            return CGRect(x: x * zoom + pan.width - 110 * zoom, y: y * zoom + pan.height - 35 * zoom, width: 220 * zoom, height: 70 * zoom).insetBy(dx: -10, dy: -10).contains(screenPoint)
         }
-        self.sourceID = nil; selectedID = step.id; save()
+        defer { sourceID = nil; connectionStart = nil; connectionEnd = nil }
+        guard let target else { return }
+        if !links.contains(where: { $0.sourceID == source.id && $0.targetID == target.id }) {
+            modelContext.insert(StepLink(taskID: task.id, sourceID: source.id, targetID: target.id))
+        }
+        selectedID = target.id; save()
     }
     private func toggle(_ step: OrbitTaskStep) {
         guard !steps.contains(where: { $0.parentID == step.id }) else { return }
@@ -716,7 +714,7 @@ private struct WorkflowNode: View {
     @Environment(\.colorScheme) private var scheme
     @Bindable var step: OrbitTaskStep
     let hasChildren: Bool; let zoom: CGFloat; let pan: CGSize; let selected: Bool; let connecting: Bool
-    let select: () -> Void; let link: () -> Void; let toggle: () -> Void; let open: () -> Void; let moved: () -> Void
+    let select: () -> Void; let connectionChanged: (CGPoint, CGPoint) -> Void; let connectionEnded: (CGPoint) -> Void; let toggle: () -> Void; let open: () -> Void; let moved: () -> Void
     @State private var origin: CGPoint?
     var body: some View {
         HStack(spacing: 11) {
@@ -728,17 +726,34 @@ private struct WorkflowNode: View {
                 Button(action: open) { Image(systemName: "rectangle.stack") }
                     .buttonStyle(.plain).foregroundStyle(OrbitTheme.accent).help("Open sub-workflow").accessibilityLabel("Open sub-workflow")
             }
-            Button(action: link) { Image(systemName: "point.topleft.down.to.point.bottomright.curvepath") }
-                .buttonStyle(.plain).foregroundStyle(connecting ? .white : OrbitTheme.accent)
-                .frame(width: 24, height: 24).background(connecting ? OrbitTheme.accent : OrbitTheme.accentSoft(scheme), in: Circle())
-                .accessibilityLabel(connecting ? "Cancel connection" : "Start connection")
         }
         .padding(13).frame(width: 220, height: 70)
         .background(OrbitTheme.surface(scheme), in: RoundedRectangle(cornerRadius: 11))
         .overlay { RoundedRectangle(cornerRadius: 11).stroke(selected ? OrbitTheme.accent : OrbitTheme.line(scheme), lineWidth: selected ? 1.7 : 1) }
+        .overlay { connectionPorts }
         .shadow(color: .black.opacity(0.055), radius: 5, y: 2).scaleEffect(zoom)
         .position(x: (step.canvasX ?? 190) * zoom + pan.width, y: (step.canvasY ?? 170) * zoom + pan.height)
         .gesture(DragGesture(minimumDistance: 2).onChanged { value in if origin == nil { origin = CGPoint(x: step.canvasX ?? 0, y: step.canvasY ?? 0) }; guard let origin else { return }; step.canvasX = origin.x + value.translation.width / zoom; step.canvasY = origin.y + value.translation.height / zoom }.onEnded { _ in origin = nil; moved() })
         .simultaneousGesture(TapGesture().onEnded(select))
+    }
+
+    @ViewBuilder private var connectionPorts: some View {
+        if selected || connecting {
+            ZStack {
+                port(offsetX: -110).offset(x: -110)
+                port(offsetX: 110).offset(x: 110)
+            }
+        }
+    }
+
+    private func port(offsetX: CGFloat) -> some View {
+        let center = CGPoint(x: (step.canvasX ?? 190) * zoom + pan.width + offsetX * zoom, y: (step.canvasY ?? 170) * zoom + pan.height)
+        return Circle().fill(OrbitTheme.surface(scheme))
+            .overlay { Circle().stroke(OrbitTheme.accent, lineWidth: 2) }
+            .frame(width: 13, height: 13).contentShape(Circle().inset(by: -6))
+            .highPriorityGesture(DragGesture(minimumDistance: 0, coordinateSpace: .named("workflowCanvas")).onChanged { value in
+                connectionChanged(center, value.location)
+            }.onEnded { value in connectionEnded(value.location) })
+            .accessibilityLabel("Drag to connect step")
     }
 }

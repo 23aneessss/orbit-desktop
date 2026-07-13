@@ -30,7 +30,7 @@ struct SettingsView: View {
 
     @AppStorage("orbit:theme") private var themePreference = "system"
     @AppStorage("orbit:accent") private var accentHex = "#8B5CF6"
-    @State private var selection: SettingsSection = .profile
+    @AppStorage("orbit:settings-section") private var selection: SettingsSection = .profile
     @State private var nameDraft = ""
     @State private var customAccent = OrbitTheme.accent
     @State private var showingWipeConfirmation = false
