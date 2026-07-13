@@ -1,0 +1,59 @@
+import SwiftData
+import XCTest
+@testable import Orbit
+
+@MainActor
+final class ImportServiceTests: XCTestCase {
+    func testRestoreReplacesContentAndRebuildsRelationships() throws {
+        let container = try makeContainer()
+        let context = container.mainContext
+        context.insert(Idea(title: "Old idea"))
+        try context.save()
+
+        let habitID = UUID()
+        let logID = UUID()
+        let ideaID = UUID()
+        let payload: [String: Any] = [
+            "app": "orbit",
+            "version": "1.0.0",
+            "habits": [["id": habitID.uuidString, "name": "Read", "icon": "book", "color": "violet", "targetPerWeek": 7, "createdAt": "2026-07-01T08:00:00Z"]],
+            "habitLogs": [["id": logID.uuidString, "habitId": habitID.uuidString, "date": "2026-07-13", "createdAt": "2026-07-13T08:00:00Z"]],
+            "ideas": [["id": ideaID.uuidString, "title": "Connected thought", "content": "Restored", "tags": ["orbit"], "pinned": true, "canvasX": 120, "canvasY": 240, "createdAt": "2026-07-01T08:00:00Z", "updatedAt": "2026-07-13T08:00:00Z"]],
+            "ideaLinks": [], "tasks": [], "taskSteps": [], "stepLinks": [], "boardStrokes": [], "boardNotes": [], "contacts": [], "interactions": [],
+            "settings": ["name": "Aness", "theme": "system", "accent": "#8B5CF6"]
+        ]
+        let data = try JSONSerialization.data(withJSONObject: payload)
+
+        let summary = try ImportService.restore(data: data, into: context)
+
+        XCTAssertEqual(summary.habits, 1)
+        XCTAssertEqual(summary.ideas, 1)
+        XCTAssertEqual(try context.fetchCount(FetchDescriptor<Habit>()), 1)
+        XCTAssertEqual(try context.fetchCount(FetchDescriptor<HabitLog>()), 1)
+        let restoredIdeas = try context.fetch(FetchDescriptor<Idea>())
+        XCTAssertEqual(restoredIdeas.map(\.title), ["Connected thought"])
+        XCTAssertEqual(restoredIdeas.first?.tags, ["orbit"])
+    }
+
+    func testRestoreRejectsBrokenRelationshipsBeforeDeletingCurrentData() throws {
+        let container = try makeContainer()
+        let context = container.mainContext
+        context.insert(Idea(title: "Keep me"))
+        try context.save()
+
+        let payload: [String: Any] = [
+            "app": "orbit", "version": "1.0.0", "habits": [],
+            "habitLogs": [["id": UUID().uuidString, "habitId": UUID().uuidString, "date": "2026-07-13"]],
+            "ideas": [], "ideaLinks": [], "tasks": [], "taskSteps": [], "stepLinks": [], "boardStrokes": [], "boardNotes": [], "contacts": [], "interactions": [], "settings": [:]
+        ]
+        let data = try JSONSerialization.data(withJSONObject: payload)
+
+        XCTAssertThrowsError(try ImportService.restore(data: data, into: context))
+        XCTAssertEqual(try context.fetch(FetchDescriptor<Idea>()).map(\.title), ["Keep me"])
+    }
+
+    private func makeContainer() throws -> ModelContainer {
+        let schema = Schema([Habit.self, HabitLog.self, Idea.self, IdeaLink.self, OrbitTask.self, OrbitTaskStep.self, StepLink.self, BoardStroke.self, BoardNote.self, Contact.self, Interaction.self, AppSetting.self])
+        return try ModelContainer(for: schema, configurations: [ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)])
+    }
+}

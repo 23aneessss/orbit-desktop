@@ -40,6 +40,11 @@ enum ImportService {
         guard panel.runModal() == .OK, let url = panel.url else { return nil }
 
         let data = try Data(contentsOf: url)
+        return try restore(data: data, into: context)
+    }
+
+    @MainActor
+    static func restore(data: Data, into context: ModelContext) throws -> ImportSummary {
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
         let backup: Backup
