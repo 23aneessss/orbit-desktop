@@ -184,7 +184,7 @@ private struct IdeaBrowserCard: View {
     }
 }
 
-private struct IdeaEditorView: View {
+struct IdeaEditorView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.colorScheme) private var scheme
     @Bindable var idea: Idea

@@ -18,12 +18,36 @@ struct IdeaCanvasView: View {
     @State private var zoom: CGFloat = 1
     @State private var committedZoom: CGFloat = 1
     @State private var selectedIdeaID: UUID?
+    @State private var openedIdeaID: UUID?
+    @State private var selectedLinkID: UUID?
     @State private var connectionSourceID: UUID?
     @State private var connectionStart: CGPoint?
     @State private var connectionEnd: CGPoint?
     @State private var mergeCandidate: MergeCandidate?
 
     var body: some View {
+        Group {
+            if let openedIdeaID,
+               let idea = ideas.first(where: { $0.id == openedIdeaID }) {
+                IdeaEditorView(idea: idea) { self.openedIdeaID = nil }
+            } else {
+                canvasContent
+            }
+        }
+        .background(OrbitTheme.canvas(scheme))
+        .task { tileUnplacedIdeas() }
+        .onChange(of: ideas.map(\.id)) { tileUnplacedIdeas() }
+        .sheet(item: $mergeCandidate) { candidate in
+            if let dragged = ideas.first(where: { $0.id == candidate.draggedID }),
+               let target = ideas.first(where: { $0.id == candidate.targetID }) {
+                MergeIdeasSheet(dragged: dragged, target: target) {
+                    merge(dragged: dragged, into: target)
+                }
+            }
+        }
+    }
+
+    private var canvasContent: some View {
         VStack(spacing: 0) {
             header
             Divider().overlay(OrbitTheme.line(scheme))
@@ -40,8 +64,12 @@ struct IdeaCanvasView: View {
                             }
                         )
 
-                    CanvasEdges(ideas: ideas, links: links, pan: pan, zoom: zoom)
+                    CanvasEdges(ideas: ideas, links: links, pan: pan, zoom: zoom, selectedLinkID: selectedLinkID)
                         .allowsHitTesting(false)
+                    CanvasEdgeHitLayer(ideas: ideas, links: links, pan: pan, zoom: zoom) { linkID in
+                        selectedLinkID = linkID
+                        selectedIdeaID = nil
+                    }
                     CanvasConnectionPreview(start: connectionStart, end: connectionEnd)
                         .allowsHitTesting(false)
 
@@ -51,7 +79,11 @@ struct IdeaCanvasView: View {
                             zoom: zoom,
                             pan: pan,
                             selected: selectedIdeaID == idea.id,
-                            select: { selectedIdeaID = idea.id },
+                            connecting: connectionSourceID == idea.id,
+                            select: {
+                                selectedLinkID = nil
+                                openedIdeaID = idea.id
+                            },
                             connectionChanged: { start, end in
                                 selectedIdeaID = idea.id; connectionSourceID = idea.id; connectionStart = start; connectionEnd = end
                             },
@@ -66,21 +98,10 @@ struct IdeaCanvasView: View {
                 }
                 .clipped()
                 .coordinateSpace(name: "ideaCanvas")
-                .onDeleteCommand { deleteSelected() }
-                .onExitCommand { connectionSourceID = nil; selectedIdeaID = nil }
+                .onDeleteCommand { selectedLinkID == nil ? deleteSelected() : deleteSelectedLink() }
+                .onExitCommand { connectionSourceID = nil; selectedIdeaID = nil; selectedLinkID = nil }
                 .accessibilityAction(named: "Create idea at viewport center") {
                     addIdea(at: CGPoint(x: proxy.size.width / 2, y: proxy.size.height / 2))
-                }
-            }
-        }
-        .background(OrbitTheme.canvas(scheme))
-        .task { tileUnplacedIdeas() }
-        .onChange(of: ideas.map(\.id)) { tileUnplacedIdeas() }
-        .sheet(item: $mergeCandidate) { candidate in
-            if let dragged = ideas.first(where: { $0.id == candidate.draggedID }),
-               let target = ideas.first(where: { $0.id == candidate.targetID }) {
-                MergeIdeasSheet(dragged: dragged, target: target) {
-                    merge(dragged: dragged, into: target)
                 }
             }
         }
@@ -94,6 +115,10 @@ struct IdeaCanvasView: View {
                     .font(.system(size: 13.5)).foregroundStyle(OrbitTheme.ink2(scheme))
             }
             Spacer()
+            if selectedLinkID != nil {
+                Button(role: .destructive) { deleteSelectedLink() } label: { Label("Delete link", systemImage: "link.badge.minus") }
+                    .buttonStyle(.bordered)
+            }
             if selectedIdeaID != nil {
                 Button(role: .destructive) { deleteSelected() } label: { Label("Delete", systemImage: "trash") }
                     .buttonStyle(.bordered)
@@ -173,14 +198,13 @@ struct IdeaCanvasView: View {
             guard idea.id != source.id, let x = idea.canvasX, let y = idea.canvasY else { return false }
             return CGRect(x: x * zoom + pan.width - 112 * zoom, y: y * zoom + pan.height - 59 * zoom, width: 224 * zoom, height: 118 * zoom).insetBy(dx: -10, dy: -10).contains(screenPoint)
         }
-        defer { connectionSourceID = nil; connectionStart = nil; connectionEnd = nil }
+        defer { connectionSourceID = nil; connectionStart = nil; connectionEnd = nil; selectedIdeaID = nil }
         guard let target else { return }
         let duplicate = links.contains {
             ($0.ideaAID == source.id && $0.ideaBID == target.id) || ($0.ideaAID == target.id && $0.ideaBID == source.id)
         }
         if !duplicate { modelContext.insert(IdeaLink(ideaAID: source.id, ideaBID: target.id)) }
         try? modelContext.save()
-        selectedIdeaID = target.id
     }
 
     private func nodeMoved(_ idea: Idea) {
@@ -204,6 +228,13 @@ struct IdeaCanvasView: View {
         links.filter { $0.ideaAID == selectedIdeaID || $0.ideaBID == selectedIdeaID }.forEach(modelContext.delete)
         modelContext.delete(idea); try? modelContext.save()
         self.selectedIdeaID = nil; connectionSourceID = nil
+    }
+
+    private func deleteSelectedLink() {
+        guard let selectedLinkID, let link = links.first(where: { $0.id == selectedLinkID }) else { return }
+        modelContext.delete(link)
+        try? modelContext.save()
+        self.selectedLinkID = nil
     }
 
     private func merge(dragged: Idea, into target: Idea) {
@@ -260,35 +291,65 @@ private struct CanvasEdges: View {
     let links: [IdeaLink]
     let pan: CGSize
     let zoom: CGFloat
+    let selectedLinkID: UUID?
 
     var body: some View {
         Canvas { context, _ in
             let ideasByID = Dictionary(uniqueKeysWithValues: ideas.map { ($0.id, $0) })
             for link in links {
                 guard let a = ideasByID[link.ideaAID], let b = ideasByID[link.ideaBID],
-                      let ax = a.canvasX, let ay = a.canvasY, let bx = b.canvasX, let by = b.canvasY else { continue }
-                let aCenter = CGPoint(x: ax * zoom + pan.width, y: ay * zoom + pan.height)
-                let bCenter = CGPoint(x: bx * zoom + pan.width, y: by * zoom + pan.height)
-                let nodeSize = CGSize(width: 224 * zoom, height: 118 * zoom)
-                let start = borderPoint(from: aCenter, toward: bCenter, size: nodeSize)
-                let end = borderPoint(from: bCenter, toward: aCenter, size: nodeSize)
-                let bend = max(38 * zoom, abs(end.x - start.x) * 0.42)
-                var path = Path(); path.move(to: start)
-                path.addCurve(to: end,
-                              control1: CGPoint(x: start.x + (end.x >= start.x ? bend : -bend), y: start.y),
-                              control2: CGPoint(x: end.x - (end.x >= start.x ? bend : -bend), y: end.y))
-                context.stroke(path, with: .color(OrbitTheme.accent.opacity(0.34)),
-                               style: StrokeStyle(lineWidth: max(1, 1.6 * zoom), lineCap: .round))
+                      let path = ideaLinkPath(from: a, to: b, pan: pan, zoom: zoom) else { continue }
+                let selected = selectedLinkID == link.id
+                context.stroke(path, with: .color(OrbitTheme.accent.opacity(selected ? 0.9 : 0.34)),
+                               style: StrokeStyle(lineWidth: max(selected ? 2.8 : 1, (selected ? 2.8 : 1.6) * zoom), lineCap: .round))
             }
         }
     }
+}
 
-    private func borderPoint(from center: CGPoint, toward target: CGPoint, size: CGSize) -> CGPoint {
+private struct CanvasEdgeHitLayer: View {
+    let ideas: [Idea]
+    let links: [IdeaLink]
+    let pan: CGSize
+    let zoom: CGFloat
+    let select: (UUID) -> Void
+
+    var body: some View {
+        let ideasByID = Dictionary(uniqueKeysWithValues: ideas.map { ($0.id, $0) })
+        ZStack {
+            ForEach(links) { link in
+                if let a = ideasByID[link.ideaAID], let b = ideasByID[link.ideaBID],
+                   let path = ideaLinkPath(from: a, to: b, pan: pan, zoom: zoom) {
+                    path.stroke(Color.black.opacity(0.001), style: StrokeStyle(lineWidth: 14, lineCap: .round))
+                        .contentShape(path.strokedPath(StrokeStyle(lineWidth: 14, lineCap: .round)))
+                        .onTapGesture { select(link.id) }
+                        .help("Select link")
+                }
+            }
+        }
+    }
+}
+
+private func ideaLinkPath(from a: Idea, to b: Idea, pan: CGSize, zoom: CGFloat) -> Path? {
+    guard let ax = a.canvasX, let ay = a.canvasY, let bx = b.canvasX, let by = b.canvasY else { return nil }
+    let aCenter = CGPoint(x: ax * zoom + pan.width, y: ay * zoom + pan.height)
+    let bCenter = CGPoint(x: bx * zoom + pan.width, y: by * zoom + pan.height)
+    let nodeSize = CGSize(width: 224 * zoom, height: 118 * zoom)
+    func borderPoint(from center: CGPoint, toward target: CGPoint) -> CGPoint {
         let dx = target.x - center.x, dy = target.y - center.y
         guard dx != 0 || dy != 0 else { return center }
-        let scale = min((size.width / 2) / max(abs(dx), 0.001), (size.height / 2) / max(abs(dy), 0.001))
+        let scale = min((nodeSize.width / 2) / max(abs(dx), 0.001), (nodeSize.height / 2) / max(abs(dy), 0.001))
         return CGPoint(x: center.x + dx * scale, y: center.y + dy * scale)
     }
+    let start = borderPoint(from: aCenter, toward: bCenter)
+    let end = borderPoint(from: bCenter, toward: aCenter)
+    let bend = max(38 * zoom, abs(end.x - start.x) * 0.42)
+    var path = Path()
+    path.move(to: start)
+    path.addCurve(to: end,
+                  control1: CGPoint(x: start.x + (end.x >= start.x ? bend : -bend), y: start.y),
+                  control2: CGPoint(x: end.x - (end.x >= start.x ? bend : -bend), y: end.y))
+    return path
 }
 
 struct CanvasConnectionPreview: View {
@@ -310,11 +371,13 @@ private struct CanvasIdeaNode: View {
     let zoom: CGFloat
     let pan: CGSize
     let selected: Bool
+    let connecting: Bool
     let select: () -> Void
     let connectionChanged: (CGPoint, CGPoint) -> Void
     let connectionEnded: (CGPoint) -> Void
     let moved: () -> Void
     @State private var dragOrigin: CGPoint?
+    @State private var hovering = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -338,6 +401,7 @@ private struct CanvasIdeaNode: View {
         .overlay { RoundedRectangle(cornerRadius: 12).stroke(selected ? OrbitTheme.accent : OrbitTheme.line(scheme), lineWidth: selected ? 1.7 : 1) }
         .overlay { connectionPorts }
         .shadow(color: .black.opacity(selected ? 0.09 : 0.055), radius: selected ? 8 : 5, y: 2)
+        .onHover { hovering = $0 }
         .scaleEffect(zoom)
         .position(x: (idea.canvasX ?? 200) * zoom + pan.width, y: (idea.canvasY ?? 200) * zoom + pan.height)
         .gesture(
@@ -358,7 +422,7 @@ private struct CanvasIdeaNode: View {
     }
 
     @ViewBuilder private var connectionPorts: some View {
-        if selected {
+        if hovering || connecting {
             ZStack {
                 port(offset: CGPoint(x: 0, y: -59)).offset(y: -59)
                 port(offset: CGPoint(x: 112, y: 0)).offset(x: 112)

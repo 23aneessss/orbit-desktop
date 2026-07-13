@@ -458,6 +458,7 @@ private struct WorkflowCanvasView: View {
     @State private var zoom: CGFloat = 1
     @State private var committedZoom: CGFloat = 1
     @State private var selectedID: UUID?
+    @State private var selectedLinkID: UUID?
     @State private var sourceID: UUID?
     @State private var connectionStart: CGPoint?
     @State private var connectionEnd: CGPoint?
@@ -479,7 +480,12 @@ private struct WorkflowCanvasView: View {
                     .simultaneousGesture(magnifyGesture)
                 WorkflowInkLayer(strokes: visibleStrokes, preview: activeStroke, previewColor: inkColor, pan: pan, zoom: zoom)
                     .allowsHitTesting(false)
-                WorkflowEdges(steps: visibleSteps, links: links, pan: pan, zoom: zoom).allowsHitTesting(false)
+                WorkflowEdges(steps: visibleSteps, links: links, pan: pan, zoom: zoom, selectedLinkID: selectedLinkID).allowsHitTesting(false)
+                WorkflowEdgeHitLayer(steps: visibleSteps, links: links, pan: pan, zoom: zoom) { linkID in
+                    selectedLinkID = linkID
+                    selectedID = nil
+                    selectedNoteID = nil
+                }
                 CanvasConnectionPreview(start: connectionStart, end: connectionEnd).allowsHitTesting(false)
                 ForEach(visibleNotes) { note in
                     WorkflowStickyNote(note: note, zoom: zoom, pan: pan, selected: selectedNoteID == note.id) {
@@ -494,8 +500,12 @@ private struct WorkflowCanvasView: View {
                         pan: pan,
                         selected: selectedID == step.id,
                         connecting: sourceID == step.id,
-                        select: { selectedID = step.id },
-                        connectionChanged: { start, end in selectedID = step.id; sourceID = step.id; connectionStart = start; connectionEnd = end },
+                        select: {
+                            selectedLinkID = nil
+                            if steps.contains(where: { $0.parentID == step.id }) { enter(step) }
+                            else { selectedID = step.id }
+                        },
+                        connectionChanged: { start, end in selectedLinkID = nil; selectedID = step.id; sourceID = step.id; connectionStart = start; connectionEnd = end },
                         connectionEnded: { end in finishConnection(from: step, at: end) },
                         toggle: { toggle(step) },
                         open: { enter(step) },
@@ -539,6 +549,12 @@ private struct WorkflowCanvasView: View {
             }
             Button { undoAnnotation() } label: { Image(systemName: "arrow.uturn.backward").frame(width: 28, height: 28) }.buttonStyle(.plain).help("Undo last annotation")
             Divider().frame(height: 22).padding(.horizontal, 3)
+            if selectedLinkID != nil {
+                Button(role: .destructive) { deleteSelectedLink() } label: {
+                    Image(systemName: "link.badge.minus").frame(width: 28, height: 28)
+                }.buttonStyle(.plain).foregroundStyle(.red).help("Delete selected link")
+                Divider().frame(height: 22).padding(.horizontal, 3)
+            }
             Button { addStep() } label: { Label("Add step", systemImage: "plus") }.buttonStyle(.borderedProminent).controlSize(.small).tint(OrbitTheme.accent)
         }
         .padding(7).background(OrbitTheme.surface(scheme), in: RoundedRectangle(cornerRadius: 11))
@@ -582,24 +598,25 @@ private struct WorkflowCanvasView: View {
         scopeID = step.id; resetViewport(); save()
     }
     private func leaveScope() { scopeID = nil; resetViewport() }
-    private func resetViewport() { pan = .zero; committedPan = .zero; zoom = 1; committedZoom = 1; selectedID = nil; selectedNoteID = nil; sourceID = nil; connectionStart = nil; connectionEnd = nil }
+    private func resetViewport() { pan = .zero; committedPan = .zero; zoom = 1; committedZoom = 1; selectedID = nil; selectedLinkID = nil; selectedNoteID = nil; sourceID = nil; connectionStart = nil; connectionEnd = nil }
     private func finishConnection(from source: OrbitTaskStep, at screenPoint: CGPoint) {
         let target = visibleSteps.first { step in
             guard step.id != source.id, let x = step.canvasX, let y = step.canvasY else { return false }
             return CGRect(x: x * zoom + pan.width - 110 * zoom, y: y * zoom + pan.height - 35 * zoom, width: 220 * zoom, height: 70 * zoom).insetBy(dx: -10, dy: -10).contains(screenPoint)
         }
-        defer { sourceID = nil; connectionStart = nil; connectionEnd = nil }
+        defer { sourceID = nil; connectionStart = nil; connectionEnd = nil; selectedID = nil }
         guard let target else { return }
         if !links.contains(where: { $0.sourceID == source.id && $0.targetID == target.id }) {
             modelContext.insert(StepLink(taskID: task.id, sourceID: source.id, targetID: target.id))
         }
-        selectedID = target.id; save()
+        save()
     }
     private func toggle(_ step: OrbitTaskStep) {
         guard !steps.contains(where: { $0.parentID == step.id }) else { return }
         step.done.toggle(); recompute()
     }
     private func deleteSelected() {
+        if selectedLinkID != nil { deleteSelectedLink(); return }
         if let selectedNoteID, let note = notes.first(where: { $0.id == selectedNoteID }) {
             modelContext.delete(note); self.selectedNoteID = nil; save(); return
         }
@@ -615,6 +632,12 @@ private struct WorkflowCanvasView: View {
         links.filter { ids.contains($0.sourceID) || ids.contains($0.targetID) }.forEach(modelContext.delete)
         steps.filter { ids.contains($0.id) }.forEach(modelContext.delete)
         self.selectedID = nil; recompute(excluding: ids)
+    }
+    private func deleteSelectedLink() {
+        guard let selectedLinkID, let link = links.first(where: { $0.id == selectedLinkID }) else { return }
+        modelContext.delete(link)
+        self.selectedLinkID = nil
+        save()
     }
     private func undoAnnotation() {
         let lastStroke = visibleStrokes.max(by: { $0.createdAt < $1.createdAt })
@@ -694,20 +717,48 @@ private struct WorkflowBackground: View {
 }
 
 private struct WorkflowEdges: View {
-    let steps: [OrbitTaskStep]; let links: [StepLink]; let pan: CGSize; let zoom: CGFloat
+    let steps: [OrbitTaskStep]; let links: [StepLink]; let pan: CGSize; let zoom: CGFloat; let selectedLinkID: UUID?
     var body: some View {
         Canvas { context, _ in
             let map = Dictionary(uniqueKeysWithValues: steps.map { ($0.id, $0) })
             for link in links {
-                guard let source = map[link.sourceID], let target = map[link.targetID], let sx = source.canvasX, let sy = source.canvasY, let tx = target.canvasX, let ty = target.canvasY else { continue }
-                let start = CGPoint(x: (sx + 110) * zoom + pan.width, y: sy * zoom + pan.height)
-                let end = CGPoint(x: (tx - 110) * zoom + pan.width, y: ty * zoom + pan.height)
-                let bend = max(42 * zoom, abs(end.x - start.x) * 0.4)
-                var path = Path(); path.move(to: start); path.addCurve(to: end, control1: CGPoint(x: start.x + bend, y: start.y), control2: CGPoint(x: end.x - bend, y: end.y))
-                context.stroke(path, with: .color(OrbitTheme.accent.opacity(0.48)), style: StrokeStyle(lineWidth: max(1.2, 1.8 * zoom), lineCap: .round))
+                guard let source = map[link.sourceID], let target = map[link.targetID],
+                      let path = workflowLinkPath(from: source, to: target, pan: pan, zoom: zoom) else { continue }
+                let selected = selectedLinkID == link.id
+                context.stroke(path, with: .color(OrbitTheme.accent.opacity(selected ? 0.95 : 0.48)),
+                               style: StrokeStyle(lineWidth: max(selected ? 2.8 : 1.2, (selected ? 2.8 : 1.8) * zoom), lineCap: .round))
             }
         }
     }
+}
+
+private struct WorkflowEdgeHitLayer: View {
+    let steps: [OrbitTaskStep]; let links: [StepLink]; let pan: CGSize; let zoom: CGFloat; let select: (UUID) -> Void
+    var body: some View {
+        let map = Dictionary(uniqueKeysWithValues: steps.map { ($0.id, $0) })
+        ZStack {
+            ForEach(links) { link in
+                if let source = map[link.sourceID], let target = map[link.targetID],
+                   let path = workflowLinkPath(from: source, to: target, pan: pan, zoom: zoom) {
+                    path.stroke(Color.black.opacity(0.001), style: StrokeStyle(lineWidth: 14, lineCap: .round))
+                        .contentShape(path.strokedPath(StrokeStyle(lineWidth: 14, lineCap: .round)))
+                        .onTapGesture { select(link.id) }
+                        .help("Select link")
+                }
+            }
+        }
+    }
+}
+
+private func workflowLinkPath(from source: OrbitTaskStep, to target: OrbitTaskStep, pan: CGSize, zoom: CGFloat) -> Path? {
+    guard let sx = source.canvasX, let sy = source.canvasY, let tx = target.canvasX, let ty = target.canvasY else { return nil }
+    let start = CGPoint(x: (sx + 110) * zoom + pan.width, y: sy * zoom + pan.height)
+    let end = CGPoint(x: (tx - 110) * zoom + pan.width, y: ty * zoom + pan.height)
+    let bend = max(42 * zoom, abs(end.x - start.x) * 0.4)
+    var path = Path()
+    path.move(to: start)
+    path.addCurve(to: end, control1: CGPoint(x: start.x + bend, y: start.y), control2: CGPoint(x: end.x - bend, y: end.y))
+    return path
 }
 
 private struct WorkflowNode: View {
@@ -716,6 +767,7 @@ private struct WorkflowNode: View {
     let hasChildren: Bool; let zoom: CGFloat; let pan: CGSize; let selected: Bool; let connecting: Bool
     let select: () -> Void; let connectionChanged: (CGPoint, CGPoint) -> Void; let connectionEnded: (CGPoint) -> Void; let toggle: () -> Void; let open: () -> Void; let moved: () -> Void
     @State private var origin: CGPoint?
+    @State private var hovering = false
     var body: some View {
         HStack(spacing: 11) {
             Button(action: toggle) { Image(systemName: step.done ? "checkmark.circle.fill" : hasChildren ? "circle.dotted" : "circle") }
@@ -731,14 +783,16 @@ private struct WorkflowNode: View {
         .background(OrbitTheme.surface(scheme), in: RoundedRectangle(cornerRadius: 11))
         .overlay { RoundedRectangle(cornerRadius: 11).stroke(selected ? OrbitTheme.accent : OrbitTheme.line(scheme), lineWidth: selected ? 1.7 : 1) }
         .overlay { connectionPorts }
-        .shadow(color: .black.opacity(0.055), radius: 5, y: 2).scaleEffect(zoom)
+        .shadow(color: .black.opacity(0.055), radius: 5, y: 2)
+        .onHover { hovering = $0 }
+        .scaleEffect(zoom)
         .position(x: (step.canvasX ?? 190) * zoom + pan.width, y: (step.canvasY ?? 170) * zoom + pan.height)
         .gesture(DragGesture(minimumDistance: 2).onChanged { value in if origin == nil { origin = CGPoint(x: step.canvasX ?? 0, y: step.canvasY ?? 0) }; guard let origin else { return }; step.canvasX = origin.x + value.translation.width / zoom; step.canvasY = origin.y + value.translation.height / zoom }.onEnded { _ in origin = nil; moved() })
         .simultaneousGesture(TapGesture().onEnded(select))
     }
 
     @ViewBuilder private var connectionPorts: some View {
-        if selected || connecting {
+        if hovering || connecting {
             ZStack {
                 port(offsetX: -110).offset(x: -110)
                 port(offsetX: 110).offset(x: 110)
