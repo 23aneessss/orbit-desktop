@@ -65,6 +65,7 @@ struct IdeaCanvasView: View {
 
                 }
                 .clipped()
+                .coordinateSpace(name: "ideaCanvas")
                 .onDeleteCommand { deleteSelected() }
                 .onExitCommand { connectionSourceID = nil; selectedIdeaID = nil }
                 .accessibilityAction(named: "Create idea at viewport center") {
@@ -372,7 +373,7 @@ private struct CanvasIdeaNode: View {
         return Circle().fill(OrbitTheme.surface(scheme))
             .overlay { Circle().stroke(OrbitTheme.accent, lineWidth: 2) }
             .frame(width: 13, height: 13).contentShape(Circle().inset(by: -6))
-            .gesture(DragGesture(minimumDistance: 0, coordinateSpace: .global).onChanged { value in
+            .gesture(DragGesture(minimumDistance: 0, coordinateSpace: .named("ideaCanvas")).onChanged { value in
                 connectionChanged(center, value.location)
             }.onEnded { value in connectionEnded(value.location) })
             .accessibilityLabel("Drag to connect idea")
