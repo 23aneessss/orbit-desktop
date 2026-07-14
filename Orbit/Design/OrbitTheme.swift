@@ -10,6 +10,12 @@ enum OrbitTheme {
     static let amber = Color(hex: "F59E0B")
     static let rose = Color(hex: "F43F5E")
     static let teal = Color(hex: "0EA5A8")
+    static let sky = Color(hex: "0EA5E9")
+    static let indigo = Color(hex: "6366F1")
+    static let pink = Color(hex: "EC4899")
+    static let orange = Color(hex: "F97316")
+    static let lime = Color(hex: "84CC16")
+    static let cyan = Color(hex: "06B6D4")
 
     static func canvas(_ scheme: ColorScheme) -> Color {
         scheme == .dark ? Color(hex: "131211") : Color(hex: "F7F6F3")
@@ -51,6 +57,12 @@ enum OrbitTheme {
         case "amber": amber
         case "rose": rose
         case "teal": teal
+        case "sky": sky
+        case "indigo": indigo
+        case "pink": pink
+        case "orange": orange
+        case "lime": lime
+        case "cyan": cyan
         default: accent
         }
     }

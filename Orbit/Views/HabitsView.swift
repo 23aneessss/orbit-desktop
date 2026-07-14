@@ -338,7 +338,7 @@ private struct HabitEditorSheet: View {
     @FocusState private var nameFocused: Bool
 
     private let icons = ["target", "flame", "figure.run", "figure.strengthtraining.traditional", "book.fill", "drop.fill", "pencil.line", "brain.head.profile", "leaf.fill", "moon.stars.fill"]
-    private let colors = ["accent", "cobalt", "emerald", "teal", "amber", "rose"]
+    private let colors = ["accent", "indigo", "cobalt", "sky", "cyan", "teal", "emerald", "lime", "amber", "orange", "rose", "pink"]
 
     init(habit: Habit?, onSave: @escaping (String, String, String, Int, Int) -> Void, onDelete: (() -> Void)?) {
         self.habit = habit
@@ -388,7 +388,7 @@ private struct HabitEditorSheet: View {
                     }
 
                     LabeledContent("Color") {
-                        HStack(spacing: 10) {
+                        LazyVGrid(columns: Array(repeating: GridItem(.fixed(28), spacing: 8), count: 6), spacing: 10) {
                             ForEach(colors, id: \.self) { value in
                                 Button { color = value } label: {
                                     Circle().fill(OrbitTheme.habitColor(value)).frame(width: 20, height: 20)
