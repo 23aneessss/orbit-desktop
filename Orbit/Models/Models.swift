@@ -7,6 +7,7 @@ final class Habit {
     var name: String
     var icon: String
     var color: String
+    var targetPerDay: Int = 1
     var targetPerWeek: Int
     var createdAt: Date
 
@@ -18,6 +19,7 @@ final class Habit {
         name: String,
         icon: String = "target",
         color: String = "accent",
+        targetPerDay: Int = 1,
         targetPerWeek: Int = 7,
         createdAt: Date = .now
     ) {
@@ -25,9 +27,36 @@ final class Habit {
         self.name = name
         self.icon = icon
         self.color = color
+        self.targetPerDay = min(max(targetPerDay, 1), 20)
         self.targetPerWeek = min(max(targetPerWeek, 1), 7)
         self.createdAt = createdAt
         self.logs = []
+    }
+}
+
+enum HabitProgress {
+    static func counts(_ logs: [HabitLog]) -> [String: Int] {
+        Dictionary(grouping: logs, by: \.dateKey).mapValues(\.count)
+    }
+
+    static func count(on dateKey: String = OrbitDate.key(), in logs: [HabitLog]) -> Int {
+        logs.reduce(into: 0) { total, log in
+            if log.dateKey == dateKey { total += 1 }
+        }
+    }
+
+    static func isComplete(_ habit: Habit, on dateKey: String = OrbitDate.key(), in logs: [HabitLog]) -> Bool {
+        count(on: dateKey, in: logs) >= habit.targetPerDay
+    }
+
+    static func completedDaysThisWeek(for habit: Habit, logs: [HabitLog]) -> Int {
+        guard let interval = OrbitDate.calendar.dateInterval(of: .weekOfYear, for: .now) else { return 0 }
+        return counts(logs).reduce(into: 0) { total, entry in
+            guard entry.value >= habit.targetPerDay,
+                  let date = OrbitDate.keyFormatter.date(from: entry.key),
+                  interval.contains(date) else { return }
+            total += 1
+        }
     }
 }
 

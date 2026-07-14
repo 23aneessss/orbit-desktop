@@ -30,6 +30,7 @@ final class ImportServiceTests: XCTestCase {
         XCTAssertEqual(summary.ideas, 1)
         XCTAssertEqual(try context.fetchCount(FetchDescriptor<Habit>()), 1)
         XCTAssertEqual(try context.fetchCount(FetchDescriptor<HabitLog>()), 1)
+        XCTAssertEqual(try context.fetch(FetchDescriptor<Habit>()).first?.targetPerDay, 1)
         let restoredIdeas = try context.fetch(FetchDescriptor<Idea>())
         XCTAssertEqual(restoredIdeas.map(\.title), ["Connected thought"])
         XCTAssertEqual(restoredIdeas.first?.tags, ["orbit"])
@@ -55,5 +56,34 @@ final class ImportServiceTests: XCTestCase {
     private func makeContainer() throws -> ModelContainer {
         let schema = Schema([Habit.self, HabitLog.self, Idea.self, IdeaLink.self, OrbitTask.self, OrbitTaskStep.self, StepLink.self, BoardStroke.self, BoardNote.self, Contact.self, Interaction.self, AppSetting.self])
         return try ModelContainer(for: schema, configurations: [ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)])
+    }
+}
+
+@MainActor
+final class HabitProgressTests: XCTestCase {
+    func testDailyGoalRequiresTheConfiguredNumberOfCheckIns() {
+        let habit = Habit(name: "Hydrate", targetPerDay: 3, targetPerWeek: 7)
+        let first = HabitLog(dateKey: OrbitDate.key(), habit: habit)
+        let second = HabitLog(dateKey: OrbitDate.key(), habit: habit)
+
+        XCTAssertEqual(HabitProgress.count(in: [first, second]), 2)
+        XCTAssertFalse(HabitProgress.isComplete(habit, in: [first, second]))
+
+        let third = HabitLog(dateKey: OrbitDate.key(), habit: habit)
+        XCTAssertTrue(HabitProgress.isComplete(habit, in: [first, second, third]))
+    }
+
+    func testCountsAreGroupedByDateForHeatmapIntensity() {
+        let habit = Habit(name: "Practice", targetPerDay: 2, targetPerWeek: 5)
+        let yesterday = OrbitDate.key(OrbitDate.date(daysFromToday: -1))
+        let logs = [
+            HabitLog(dateKey: yesterday, habit: habit),
+            HabitLog(dateKey: yesterday, habit: habit),
+            HabitLog(dateKey: OrbitDate.key(), habit: habit)
+        ]
+
+        let counts = HabitProgress.counts(logs)
+        XCTAssertEqual(counts[yesterday], 2)
+        XCTAssertEqual(counts[OrbitDate.key()], 1)
     }
 }

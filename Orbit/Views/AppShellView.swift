@@ -46,7 +46,9 @@ struct AppShellView: View {
 
     private var completedToday: Int {
         let today = OrbitDate.key()
-        return Set(logs.filter { $0.dateKey == today }.compactMap { $0.habit?.id }).count
+        return habits.filter { habit in
+            HabitProgress.count(on: today, in: logs.filter { $0.habit?.id == habit.id }) >= habit.targetPerDay
+        }.count
     }
 
     var body: some View {
@@ -314,8 +316,9 @@ private struct CommandPaletteView: View {
                     if query.isEmpty || habits.contains(where: { $0.name.localizedStandardContains(query) }) {
                         paletteHeader("LOG TODAY")
                         ForEach(habits.filter { query.isEmpty || $0.name.localizedStandardContains(query) }) { habit in
-                            let done = logs.contains { $0.habit?.id == habit.id && $0.dateKey == OrbitDate.key() }
-                            paletteButton(habit.name, symbol: done ? "checkmark.circle.fill" : "circle") { toggleHabit(habit) }
+                            let count = HabitProgress.count(in: logs.filter { $0.habit?.id == habit.id })
+                            let done = count >= habit.targetPerDay
+                            paletteButton("\(habit.name)  \(count)/\(habit.targetPerDay)", symbol: done ? "checkmark.circle.fill" : "circle") { toggleHabit(habit) }
                         }
                     }
 
@@ -347,7 +350,8 @@ private struct CommandPaletteView: View {
 
     private func toggleHabit(_ habit: Habit) {
         let today = OrbitDate.key()
-        if let existing = logs.first(where: { $0.habit?.id == habit.id && $0.dateKey == today }) { modelContext.delete(existing) }
+        let existing = logs.filter { $0.habit?.id == habit.id && $0.dateKey == today }
+        if existing.count >= habit.targetPerDay { existing.forEach(modelContext.delete) }
         else { modelContext.insert(HabitLog(dateKey: today, habit: habit)) }
         try? modelContext.save()
     }

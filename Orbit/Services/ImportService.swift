@@ -59,7 +59,7 @@ enum ImportService {
 
             var habitsByID: [UUID: Habit] = [:]
             for item in backup.habits {
-                let habit = Habit(id: item.id, name: item.name, icon: item.icon, color: item.color, targetPerWeek: item.targetPerWeek, createdAt: item.createdAt ?? .now)
+                let habit = Habit(id: item.id, name: item.name, icon: item.icon, color: item.color, targetPerDay: item.targetPerDay ?? 1, targetPerWeek: item.targetPerWeek, createdAt: item.createdAt ?? .now)
                 context.insert(habit)
                 habitsByID[item.id] = habit
             }
@@ -155,7 +155,7 @@ private struct Backup: Decodable {
     let settings: [String: String]
 }
 
-private struct HabitItem: Decodable { let id: UUID; let name, icon, color: String; let targetPerWeek: Int; let createdAt: Date? }
+private struct HabitItem: Decodable { let id: UUID; let name, icon, color: String; let targetPerDay: Int?; let targetPerWeek: Int; let createdAt: Date? }
 private struct HabitLogItem: Decodable { let id, habitId: UUID; let date: String; let createdAt: Date? }
 private struct IdeaItem: Decodable { let id: UUID; let title, content: String; let tags: [String]; let pinned: Bool; let canvasX, canvasY: Double?; let createdAt, updatedAt: Date? }
 private struct IdeaLinkItem: Decodable { let id, ideaAId, ideaBId: UUID; let createdAt: Date? }

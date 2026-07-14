@@ -23,7 +23,7 @@ enum ExportService {
             "app": "orbit",
             "version": "1.0.0",
             "exportedAt": iso.string(from: .now),
-            "habits": habits.map { ["id": $0.id.uuidString, "name": $0.name, "icon": $0.icon, "color": $0.color, "targetPerWeek": $0.targetPerWeek, "createdAt": iso.string(from: $0.createdAt)] },
+            "habits": habits.map { ["id": $0.id.uuidString, "name": $0.name, "icon": $0.icon, "color": $0.color, "targetPerDay": $0.targetPerDay, "targetPerWeek": $0.targetPerWeek, "createdAt": iso.string(from: $0.createdAt)] },
             "habitLogs": habitLogs.map { ["id": $0.id.uuidString, "habitId": $0.habit?.id.uuidString ?? "", "date": $0.dateKey, "createdAt": iso.string(from: $0.createdAt)] },
             "ideas": ideas.map { ["id": $0.id.uuidString, "title": $0.title, "content": $0.content, "tags": $0.tags, "pinned": $0.pinned, "canvasX": json($0.canvasX), "canvasY": json($0.canvasY), "createdAt": iso.string(from: $0.createdAt), "updatedAt": iso.string(from: $0.updatedAt)] },
             "ideaLinks": ideaLinks.map { ["id": $0.id.uuidString, "ideaAId": $0.ideaAID.uuidString, "ideaBId": $0.ideaBID.uuidString, "createdAt": iso.string(from: $0.createdAt)] },

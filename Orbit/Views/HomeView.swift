@@ -15,7 +15,9 @@ struct HomeView: View {
 
     private var todayCount: Int {
         let today = OrbitDate.key()
-        return Set(logs.filter { $0.dateKey == today }.compactMap { $0.habit?.id }).count
+        return habits.filter { habit in
+            HabitProgress.count(on: today, in: logs.filter { $0.habit?.id == habit.id }) >= habit.targetPerDay
+        }.count
     }
 
     private var dueContacts: [Contact] {
@@ -27,9 +29,10 @@ struct HomeView: View {
 
     private var currentStreak: Int {
         guard let habit = featuredHabit else { return 0 }
-        let completed = Set(logs.filter { $0.habit?.id == habit.id }.map(\.dateKey))
+        let habitLogs = logs.filter { $0.habit?.id == habit.id }
+        let counts = HabitProgress.counts(habitLogs)
         var streak = 0
-        while completed.contains(OrbitDate.key(OrbitDate.date(daysFromToday: -streak))) { streak += 1 }
+        while counts[OrbitDate.key(OrbitDate.date(daysFromToday: -streak)), default: 0] >= habit.targetPerDay { streak += 1 }
         return streak
     }
 
@@ -57,7 +60,12 @@ struct HomeView: View {
                         Text("\(logs.count + ideas.count + interactions.count) actions in the last 12 months")
                             .font(.system(size: 12.5)).foregroundStyle(OrbitTheme.ink2(scheme))
                     }
-                    HeatmapView(dateKeys: Set(logs.map(\.dateKey)), accent: OrbitTheme.accent, weeks: 52)
+                    HeatmapView(
+                        completionCounts: HabitProgress.counts(logs),
+                        targetPerDay: max(habits.reduce(0) { $0 + $1.targetPerDay }, 1),
+                        accent: OrbitTheme.accent,
+                        weeks: 52
+                    )
                 }
                 .padding(22)
                 .orbitCard()
@@ -73,13 +81,17 @@ struct HomeView: View {
                             Button("View graphs") { navigate(.habits) }.buttonStyle(.plain).foregroundStyle(OrbitTheme.accent)
                         }
                         ForEach(habits.prefix(4)) { habit in
+                            let count = HabitProgress.count(in: logs.filter { $0.habit?.id == habit.id })
                             HStack(spacing: 12) {
                                 Image(systemName: habit.icon).foregroundStyle(OrbitTheme.habitColor(habit.color))
                                     .frame(width: 34, height: 34)
                                     .background(OrbitTheme.habitColor(habit.color).opacity(0.12), in: RoundedRectangle(cornerRadius: 9))
                                 Text(habit.name).font(.system(size: 13.5, weight: .medium))
                                 Spacer()
-                                Image(systemName: logs.contains(where: { $0.habit?.id == habit.id && $0.dateKey == OrbitDate.key() }) ? "checkmark.circle.fill" : "circle")
+                                Text("\(count)/\(habit.targetPerDay)")
+                                    .font(.system(size: 11.5, weight: .semibold)).monospacedDigit()
+                                    .foregroundStyle(OrbitTheme.ink2(scheme))
+                                Image(systemName: count >= habit.targetPerDay ? "checkmark.circle.fill" : "circle")
                                     .font(.system(size: 22)).foregroundStyle(OrbitTheme.habitColor(habit.color))
                             }
                             .padding(12)
