@@ -163,31 +163,56 @@ private struct HabitCard: View {
                 }
                 Spacer()
 
-                HStack(spacing: 8) {
+                HStack(spacing: 0) {
                     Button(action: decrementToday) {
-                        Image(systemName: "minus").frame(width: 26, height: 26)
+                        Image(systemName: "minus")
+                            .font(.system(size: 11, weight: .semibold))
+                            .frame(width: 36, height: 38)
+                            .contentShape(Rectangle())
                     }
-                    .buttonStyle(.bordered)
-                    .controlSize(.small)
+                    .buttonStyle(.plain)
                     .disabled(todayCount == 0)
+                    .opacity(todayCount == 0 ? 0.28 : 1)
                     .help("Remove one check-in for today")
 
-                    Text("\(todayCount)/\(habit.targetPerDay) today")
-                        .font(.system(size: 12.5, weight: .semibold))
-                        .monospacedDigit()
-                        .frame(minWidth: 72)
-                        .foregroundStyle(todayCount >= habit.targetPerDay ? accent : OrbitTheme.ink2(scheme))
+                    Divider().frame(height: 20)
+
+                    VStack(spacing: 1) {
+                        Text("TODAY")
+                            .font(.system(size: 8.5, weight: .semibold))
+                            .tracking(0.7)
+                            .foregroundStyle(OrbitTheme.ink3(scheme))
+                        Text("\(todayCount) of \(habit.targetPerDay)")
+                            .font(.system(size: 12, weight: .semibold))
+                            .monospacedDigit()
+                            .foregroundStyle(todayCount >= habit.targetPerDay ? accent : OrbitTheme.ink(scheme))
+                    }
+                    .frame(width: 64, height: 38)
+
+                    Divider().frame(height: 20)
 
                     Button(action: incrementToday) {
                         Image(systemName: todayCount >= habit.targetPerDay ? "checkmark" : "plus")
-                            .frame(width: 26, height: 26)
+                            .font(.system(size: 11, weight: .semibold))
+                            .frame(width: 36, height: 38)
+                            .contentShape(Rectangle())
                     }
-                    .buttonStyle(.borderedProminent)
-                    .controlSize(.small)
-                    .tint(accent)
+                    .buttonStyle(.plain)
+                    .foregroundStyle(accent)
                     .disabled(todayCount >= habit.targetPerDay)
+                    .opacity(todayCount >= habit.targetPerDay ? 0.55 : 1)
                     .help(todayCount >= habit.targetPerDay ? "Daily goal complete" : "Add one check-in for today")
                 }
+                .background(
+                    todayCount >= habit.targetPerDay ? accent.opacity(0.12) : OrbitTheme.sunken(scheme),
+                    in: RoundedRectangle(cornerRadius: 10, style: .continuous)
+                )
+                .overlay {
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .stroke(todayCount >= habit.targetPerDay ? accent.opacity(0.45) : OrbitTheme.line(scheme))
+                }
+                .accessibilityElement(children: .contain)
+                .accessibilityLabel("Today's progress, \(todayCount) of \(habit.targetPerDay)")
 
                 Menu {
                     Button("Edit habit", systemImage: "pencil", action: edit)
@@ -218,7 +243,7 @@ private struct HabitCard: View {
                             .frame(width: proxy.size.width * min(Double(completedDaysThisWeek) / Double(habit.targetPerWeek), 1))
                     }
                 }
-                .frame(width: 130, height: 5)
+                .frame(height: 6)
                 Text("\(completedDaysThisWeek)/\(habit.targetPerWeek) days")
                     .font(.system(size: 11.5)).foregroundStyle(OrbitTheme.ink3(scheme)).monospacedDigit()
             }
@@ -237,41 +262,53 @@ struct HeatmapView: View {
     var advanceDate: ((String) -> Void)? = nil
 
     var body: some View {
-        HStack(alignment: .top, spacing: 3) {
-            VStack(spacing: 3) {
-                ForEach(0..<7, id: \.self) { day in
-                    Text(day == 0 ? "M" : day == 2 ? "W" : day == 4 ? "F" : "")
-                        .font(.system(size: 8.5)).foregroundStyle(OrbitTheme.ink3(scheme))
-                        .frame(width: 12, height: 11)
-                }
-            }
-            GeometryReader { proxy in
-                let gap: CGFloat = 3
-                let cell = max(5, min(11, (proxy.size.width - CGFloat(weeks - 1) * gap) / CGFloat(weeks)))
-                HStack(spacing: gap) {
-                    ForEach(0..<weeks, id: \.self) { week in
-                        VStack(spacing: gap) {
-                            ForEach(0..<7, id: \.self) { day in
-                                let offset = -((weeks - 1 - week) * 7 + (6 - day))
-                                let key = OrbitDate.key(OrbitDate.date(daysFromToday: offset))
-                                heatmapCell(key: key, size: cell)
-                            }
-                        }
+        VStack(spacing: 7) {
+            HStack(spacing: 5) {
+                Color.clear.frame(width: 16, height: 1)
+                HStack(spacing: 0) {
+                    ForEach(monthLabels, id: \.self) { month in
+                        Text(month)
+                            .font(.system(size: 9.5, weight: .medium))
+                            .foregroundStyle(OrbitTheme.ink3(scheme))
+                            .frame(maxWidth: .infinity, alignment: .leading)
                     }
                 }
             }
-            .frame(height: 95)
+
+            LazyVGrid(
+                columns: [GridItem(.fixed(16), spacing: 5)] + Array(repeating: GridItem(.flexible(minimum: 5), spacing: 3), count: weeks),
+                spacing: 3
+            ) {
+                ForEach(0..<7, id: \.self) { day in
+                    Text(day == 0 ? "M" : day == 2 ? "W" : day == 4 ? "F" : "")
+                        .font(.system(size: 8.5)).foregroundStyle(OrbitTheme.ink3(scheme))
+                        .frame(maxWidth: .infinity)
+                    ForEach(0..<weeks, id: \.self) { week in
+                        let offset = -((weeks - 1 - week) * 7 + (6 - day))
+                        let key = OrbitDate.key(OrbitDate.date(daysFromToday: offset))
+                        heatmapCell(key: key)
+                    }
+                }
+            }
         }
         .frame(maxWidth: .infinity)
     }
 
-    @ViewBuilder private func heatmapCell(key: String, size: CGFloat) -> some View {
+    private var monthLabels: [String] {
+        let formatter = DateFormatter()
+        formatter.locale = .current
+        let symbols = formatter.shortMonthSymbols ?? ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+        let currentMonth = OrbitDate.calendar.component(.month, from: .now) - 1
+        return (1...12).map { symbols[(currentMonth + $0) % 12] }
+    }
+
+    @ViewBuilder private func heatmapCell(key: String) -> some View {
         let count = completionCounts[key, default: 0]
         let ratio = min(Double(count) / Double(max(targetPerDay, 1)), 1)
         let fill = count == 0 ? OrbitTheme.sunken(scheme) : accent.opacity(0.2 + 0.8 * ratio)
         let square = RoundedRectangle(cornerRadius: 2)
             .fill(fill)
-            .frame(width: size, height: size)
+            .aspectRatio(1, contentMode: .fit)
         if let advanceDate {
             Button { advanceDate(key) } label: { square }
                 .buttonStyle(.plain)
