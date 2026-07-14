@@ -22,7 +22,8 @@ struct IdeasView: View {
                 || idea.content.localizedStandardContains(query)
                 || idea.tags.contains(where: { $0.localizedStandardContains(query) })
             let matchesTag = selectedTag == nil || idea.tags.contains(selectedTag!)
-            return matchesQuery && matchesTag
+            let matchesHierarchy = !query.isEmpty || selectedTag != nil || idea.parentID == nil
+            return matchesQuery && matchesTag && matchesHierarchy
         }
     }
 
@@ -36,7 +37,7 @@ struct IdeasView: View {
     var body: some View {
         Group {
             if let selectedIdeaID, let idea = ideas.first(where: { $0.id == selectedIdeaID }) {
-                IdeaEditorView(idea: idea) { self.selectedIdeaID = nil }
+                IdeaEditorView(idea: idea, openIdea: { self.selectedIdeaID = $0 }) { self.selectedIdeaID = nil }
             } else {
                 browser
             }
@@ -113,7 +114,13 @@ struct IdeasView: View {
                 Text(title).font(.system(size: 14.5, weight: .semibold))
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 250), spacing: 14)], spacing: 14) {
                     ForEach(ideas) { idea in
-                        IdeaBrowserCard(idea: idea, open: { selectedIdeaID = idea.id }, delete: { delete(idea) })
+                        IdeaBrowserCard(
+                            idea: idea,
+                            childCount: self.ideas.count { $0.parentID == idea.id },
+                            parentTitle: self.ideas.first { $0.id == idea.parentID }?.title,
+                            open: { selectedIdeaID = idea.id },
+                            delete: { delete(idea) }
+                        )
                     }
                 }
             }
@@ -151,6 +158,7 @@ struct IdeasView: View {
         if let links = try? modelContext.fetch(descriptor) {
             links.filter { $0.ideaAID == ideaID || $0.ideaBID == ideaID }.forEach(modelContext.delete)
         }
+        ideas.filter { $0.parentID == ideaID }.forEach { $0.parentID = nil }
         modelContext.delete(idea)
         try? modelContext.save()
     }
@@ -159,6 +167,8 @@ struct IdeasView: View {
 private struct IdeaBrowserCard: View {
     @Environment(\.colorScheme) private var scheme
     @Bindable var idea: Idea
+    let childCount: Int
+    let parentTitle: String?
     let open: () -> Void
     let delete: () -> Void
 
@@ -179,7 +189,7 @@ private struct IdeaBrowserCard: View {
                     }
                     .menuStyle(.borderlessButton).fixedSize()
                 }
-                Text(idea.content.isEmpty ? "Nothing written yet." : idea.content)
+                Text(idea.contentExcerpt.isEmpty ? "Nothing written yet." : idea.contentExcerpt)
                     .font(.system(size: 12)).foregroundStyle(OrbitTheme.ink2(scheme)).lineLimit(3)
                     .frame(maxWidth: .infinity, minHeight: 52, alignment: .topLeading)
                 HStack(spacing: 5) {
@@ -189,6 +199,13 @@ private struct IdeaBrowserCard: View {
                             .background(OrbitTheme.sunken(scheme), in: RoundedRectangle(cornerRadius: 5))
                     }
                     if idea.tags.count > 2 { Text("+\(idea.tags.count - 2)").font(.system(size: 10.5)).foregroundStyle(OrbitTheme.ink3(scheme)) }
+                    if childCount > 0 {
+                        Label("\(childCount)", systemImage: "doc.on.doc")
+                            .font(.system(size: 10.5)).foregroundStyle(OrbitTheme.ink3(scheme))
+                    } else if let parentTitle, !parentTitle.isEmpty {
+                        Label(parentTitle, systemImage: "arrow.turn.up.left")
+                            .font(.system(size: 10.5)).foregroundStyle(OrbitTheme.ink3(scheme)).lineLimit(1)
+                    }
                     Spacer()
                     Text(idea.updatedAt, style: .relative).font(.system(size: 10.5)).foregroundStyle(OrbitTheme.ink3(scheme))
                 }
@@ -202,7 +219,10 @@ private struct IdeaBrowserCard: View {
 struct IdeaEditorView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.colorScheme) private var scheme
+    @Query(sort: \Idea.updatedAt, order: .reverse) private var allIdeas: [Idea]
+    @Query private var allLinks: [IdeaLink]
     @Bindable var idea: Idea
+    let openIdea: (UUID) -> Void
     let close: () -> Void
 
     @State private var tagDraft = ""
@@ -210,71 +230,221 @@ struct IdeaEditorView: View {
     @State private var autosaveTask: Task<Void, Never>?
 
     private var wordCount: Int { idea.content.split(whereSeparator: \.isWhitespace).count }
-    private var readSeconds: Int { max(1, Int((Double(wordCount) / 200) * 60)) }
+    private var outgoingLinks: [IdeaLink] { allLinks.filter { $0.sourceID == idea.id } }
+    private var incomingLinks: [IdeaLink] { allLinks.filter { $0.targetID == idea.id } }
+    private var children: [Idea] { allIdeas.filter { $0.parentID == idea.id }.sorted { $0.updatedAt > $1.updatedAt } }
+    private var parent: Idea? { allIdeas.first { $0.id == idea.parentID } }
+    private var availableTargets: [Idea] {
+        let linkedIDs = Set(outgoingLinks.map(\.targetID))
+        return allIdeas.filter { $0.id != idea.id && !linkedIDs.contains($0.id) }
+    }
 
     var body: some View {
         VStack(spacing: 0) {
-            HStack {
-                Button(action: close) { Label("Ideas", systemImage: "chevron.left") }.buttonStyle(.plain)
-                Spacer()
-                Text(saveState).font(.system(size: 11.5)).foregroundStyle(OrbitTheme.ink3(scheme))
-                Button { idea.pinned.toggle(); scheduleSave() } label: { Image(systemName: idea.pinned ? "pin.fill" : "pin") }
-                    .buttonStyle(.plain).foregroundStyle(idea.pinned ? OrbitTheme.accent : OrbitTheme.ink2(scheme)).help(idea.pinned ? "Unpin" : "Pin")
-                Button(role: .destructive) { deleteIdea() } label: { Image(systemName: "trash") }
-                    .buttonStyle(.plain).help("Delete idea")
-            }
-            .padding(.horizontal, 28).frame(height: 54)
+            editorHeader
             Divider().overlay(OrbitTheme.line(scheme))
 
             HStack(alignment: .top, spacing: 0) {
                 ScrollView {
-                    VStack(alignment: .leading, spacing: 18) {
+                    VStack(alignment: .leading, spacing: 20) {
+                        pageBreadcrumb
+
                         TextField("Untitled", text: $idea.title, axis: .vertical)
                             .textFieldStyle(.plain).font(.system(size: 30, weight: .semibold))
                             .onChange(of: idea.title) { scheduleSave() }
 
-                        HStack(spacing: 6) {
-                            ForEach(idea.tags, id: \.self) { tag in
-                                HStack(spacing: 4) {
-                                    Text("#\(tag)")
-                                    Button { removeTag(tag) } label: { Image(systemName: "xmark") }
-                                        .buttonStyle(.plain).font(.system(size: 8, weight: .bold))
-                                }
-                                .font(.system(size: 11.5)).foregroundStyle(OrbitTheme.ink2(scheme))
-                                .padding(.horizontal, 8).padding(.vertical, 5)
-                                .background(OrbitTheme.sunken(scheme), in: Capsule())
-                            }
-                            TextField("Add tag", text: $tagDraft)
-                                .textFieldStyle(.plain).frame(width: 110)
-                                .onSubmit(addTag)
-                        }
+                        tags
+                        relationships
+                        subpages
 
-                        TextEditor(text: $idea.content)
-                            .font(.system(size: 15)).lineSpacing(7)
-                            .scrollContentBackground(.hidden)
-                            .frame(minHeight: 480)
+                        MarkdownWorkspace(text: $idea.content)
+                            .frame(minHeight: 560)
                             .onChange(of: idea.content) { scheduleSave() }
                     }
-                    .padding(.horizontal, 52).padding(.vertical, 38)
-                    .frame(maxWidth: 760, alignment: .leading).frame(maxWidth: .infinity)
+                    .padding(.horizontal, 46).padding(.vertical, 32)
+                    .frame(maxWidth: 900, alignment: .leading).frame(maxWidth: .infinity)
                 }
 
                 Divider().overlay(OrbitTheme.line(scheme))
-                VStack(alignment: .leading, spacing: 18) {
-                    Text("Document").font(.system(size: 13.5, weight: .semibold))
-                    stat("Words", "\(wordCount)")
-                    stat("Characters", "\(idea.content.count)")
-                    stat("Read time", String(format: "%d:%02d", readSeconds / 60, readSeconds % 60))
-                    Divider().overlay(OrbitTheme.line(scheme))
-                    stat("Created", idea.createdAt.formatted(date: .abbreviated, time: .omitted))
-                    stat("Edited", idea.updatedAt.formatted(date: .abbreviated, time: .shortened))
-                    Spacer()
-                }
-                .padding(24).frame(width: 250, alignment: .leading).background(OrbitTheme.sunken(scheme).opacity(0.38))
+                documentSidebar
             }
         }
         .background(OrbitTheme.canvas(scheme))
         .onDisappear { autosaveTask?.cancel(); saveNow() }
+    }
+
+    private var editorHeader: some View {
+        HStack(spacing: 14) {
+            Button(action: close) { Label("Ideas", systemImage: "chevron.left") }.buttonStyle(.plain)
+            Spacer()
+            Text(saveState).font(.system(size: 11.5)).foregroundStyle(OrbitTheme.ink3(scheme))
+            Button { idea.pinned.toggle(); scheduleSave() } label: { Image(systemName: idea.pinned ? "pin.fill" : "pin") }
+                .buttonStyle(.plain).foregroundStyle(idea.pinned ? OrbitTheme.accent : OrbitTheme.ink2(scheme)).help(idea.pinned ? "Unpin" : "Pin")
+            Button(role: .destructive) { deleteIdea() } label: { Image(systemName: "trash") }
+                .buttonStyle(.plain).help("Delete idea")
+        }
+        .padding(.horizontal, 28).frame(height: 54)
+    }
+
+    @ViewBuilder private var pageBreadcrumb: some View {
+        if let parent {
+            HStack(spacing: 7) {
+                Button { openIdea(parent.id) } label: {
+                    Label(parent.title.isEmpty ? "Untitled" : parent.title, systemImage: "doc.text")
+                }
+                .buttonStyle(.plain).foregroundStyle(OrbitTheme.ink2(scheme))
+                Image(systemName: "chevron.right").font(.system(size: 9, weight: .semibold)).foregroundStyle(OrbitTheme.ink3(scheme))
+                Text(idea.title.isEmpty ? "Untitled page" : idea.title).foregroundStyle(OrbitTheme.ink3(scheme))
+            }
+            .font(.system(size: 11.5, weight: .medium))
+        }
+    }
+
+    private var tags: some View {
+        HStack(spacing: 6) {
+            ForEach(idea.tags, id: \.self) { tag in
+                HStack(spacing: 4) {
+                    Text("#\(tag)")
+                    Button { removeTag(tag) } label: { Image(systemName: "xmark") }
+                        .buttonStyle(.plain).font(.system(size: 8, weight: .bold))
+                }
+                .font(.system(size: 11.5)).foregroundStyle(OrbitTheme.ink2(scheme))
+                .padding(.horizontal, 8).padding(.vertical, 5)
+                .background(OrbitTheme.sunken(scheme), in: Capsule())
+            }
+            TextField("Add tag", text: $tagDraft)
+                .textFieldStyle(.plain).frame(width: 110)
+                .onSubmit(addTag)
+        }
+    }
+
+    private var relationships: some View {
+        VStack(alignment: .leading, spacing: 13) {
+            HStack {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Relationships").font(.system(size: 13.5, weight: .semibold))
+                    Text("Directed links describe which ideas this page uses.")
+                        .font(.system(size: 11.5)).foregroundStyle(OrbitTheme.ink3(scheme))
+                }
+                Spacer()
+                Menu {
+                    if availableTargets.isEmpty {
+                        Text("No more ideas to connect")
+                    } else {
+                        ForEach(availableTargets) { target in
+                            Button(target.title.isEmpty ? "Untitled" : target.title) { addRelation(to: target) }
+                        }
+                    }
+                } label: {
+                    Label("Add relation", systemImage: "arrow.triangle.branch")
+                }
+                .buttonStyle(.bordered).controlSize(.small)
+            }
+
+            relationshipRow(title: "Uses", symbol: "arrow.right", links: outgoingLinks, targetKeyPath: \.targetID)
+            relationshipRow(title: "Used by", symbol: "arrow.left", links: incomingLinks, targetKeyPath: \.sourceID)
+        }
+        .padding(15)
+        .background(OrbitTheme.sunken(scheme).opacity(0.58), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .overlay { RoundedRectangle(cornerRadius: 12).stroke(OrbitTheme.line(scheme)) }
+    }
+
+    private func relationshipRow(
+        title: String,
+        symbol: String,
+        links: [IdeaLink],
+        targetKeyPath: KeyPath<IdeaLink, UUID>
+    ) -> some View {
+        HStack(alignment: .top, spacing: 10) {
+            Label(title, systemImage: symbol)
+                .font(.system(size: 11.5, weight: .medium)).foregroundStyle(OrbitTheme.ink2(scheme))
+                .frame(width: 78, alignment: .leading).padding(.top, 5)
+            if links.isEmpty {
+                Text("None").font(.system(size: 11.5)).foregroundStyle(OrbitTheme.ink3(scheme)).padding(.top, 5)
+            } else {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 6) {
+                        ForEach(links) { link in
+                            if let related = allIdeas.first(where: { $0.id == link[keyPath: targetKeyPath] }) {
+                                HStack(spacing: 5) {
+                                    Button(related.title.isEmpty ? "Untitled" : related.title) { openIdea(related.id) }
+                                        .buttonStyle(.plain).lineLimit(1)
+                                    Button { removeRelation(link) } label: { Image(systemName: "xmark") }
+                                        .buttonStyle(.plain).font(.system(size: 8, weight: .bold))
+                                        .help("Remove relationship")
+                                }
+                                .font(.system(size: 11.5, weight: .medium)).foregroundStyle(OrbitTheme.ink2(scheme))
+                                .padding(.horizontal, 9).frame(height: 28)
+                                .background(OrbitTheme.surface(scheme), in: Capsule())
+                                .overlay { Capsule().stroke(OrbitTheme.line(scheme)) }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private var subpages: some View {
+        VStack(alignment: .leading, spacing: 11) {
+            HStack {
+                Text("Pages inside this idea").font(.system(size: 13.5, weight: .semibold))
+                Spacer()
+                Button { createSubpage() } label: { Label("New subpage", systemImage: "doc.badge.plus") }
+                    .buttonStyle(.bordered).controlSize(.small)
+            }
+            if children.isEmpty {
+                Text("Break this idea into focused pages. Every subpage also appears as a node on the Canvas.")
+                    .font(.system(size: 11.5)).foregroundStyle(OrbitTheme.ink3(scheme))
+            } else {
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 210), spacing: 8)], spacing: 8) {
+                    ForEach(children) { child in
+                        Button { openIdea(child.id) } label: {
+                            HStack(spacing: 9) {
+                                Image(systemName: "doc.text").foregroundStyle(OrbitTheme.accent)
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(child.title.isEmpty ? "Untitled page" : child.title)
+                                        .font(.system(size: 12, weight: .semibold)).lineLimit(1)
+                                    Text(child.contentExcerpt.isEmpty ? "Empty page" : child.contentExcerpt)
+                                        .font(.system(size: 10.5)).foregroundStyle(OrbitTheme.ink3(scheme)).lineLimit(1)
+                                }
+                                Spacer()
+                                Image(systemName: "chevron.right").font(.system(size: 9, weight: .bold)).foregroundStyle(OrbitTheme.ink3(scheme))
+                            }
+                            .padding(.horizontal, 11).frame(height: 48)
+                            .background(OrbitTheme.surface(scheme), in: RoundedRectangle(cornerRadius: 9))
+                            .overlay { RoundedRectangle(cornerRadius: 9).stroke(OrbitTheme.line(scheme)) }
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+        }
+    }
+
+    private var documentSidebar: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            Text("Document").font(.system(size: 13.5, weight: .semibold))
+            stat("Words", "\(wordCount)")
+            stat("Characters", "\(idea.content.count)")
+            stat("Subpages", "\(children.count)")
+            stat("Relations", "\(outgoingLinks.count + incomingLinks.count)")
+            Divider().overlay(OrbitTheme.line(scheme))
+            if let parent {
+                VStack(alignment: .leading, spacing: 7) {
+                    Text("Parent page").font(.system(size: 11.5)).foregroundStyle(OrbitTheme.ink2(scheme))
+                    Button(parent.title.isEmpty ? "Untitled" : parent.title) { openIdea(parent.id) }
+                        .buttonStyle(.plain).font(.system(size: 11.5, weight: .medium)).lineLimit(2)
+                    Button("Move to top level") { idea.parentID = nil; scheduleSave() }
+                        .buttonStyle(.plain).font(.system(size: 10.5)).foregroundStyle(OrbitTheme.accent)
+                }
+                Divider().overlay(OrbitTheme.line(scheme))
+            }
+            stat("Created", idea.createdAt.formatted(date: .abbreviated, time: .omitted))
+            stat("Edited", idea.updatedAt.formatted(date: .abbreviated, time: .shortened))
+            Spacer()
+        }
+        .padding(24).frame(width: 250, alignment: .leading).background(OrbitTheme.sunken(scheme).opacity(0.38))
     }
 
     private func stat(_ label: String, _ value: String) -> some View {
@@ -289,6 +459,32 @@ struct IdeaEditorView: View {
     }
 
     private func removeTag(_ tag: String) { idea.tags.removeAll { $0 == tag }; scheduleSave() }
+
+    private func addRelation(to target: Idea) {
+        guard target.id != idea.id,
+              !allLinks.contains(where: { $0.sourceID == idea.id && $0.targetID == target.id }) else { return }
+        modelContext.insert(IdeaLink(ideaAID: idea.id, ideaBID: target.id))
+        try? modelContext.save()
+    }
+
+    private func removeRelation(_ link: IdeaLink) {
+        modelContext.delete(link)
+        try? modelContext.save()
+    }
+
+    private func createSubpage() {
+        let offset = Double(children.count % 4) * 34
+        let child = Idea(
+            title: "Untitled page",
+            canvasX: idea.canvasX.map { $0 + 280 + offset },
+            canvasY: idea.canvasY.map { $0 + 150 + offset },
+            parentID: idea.id
+        )
+        modelContext.insert(child)
+        modelContext.insert(IdeaLink(ideaAID: idea.id, ideaBID: child.id))
+        try? modelContext.save()
+        openIdea(child.id)
+    }
 
     private func scheduleSave() {
         saveState = "Saving…"
@@ -308,10 +504,8 @@ struct IdeaEditorView: View {
 
     private func deleteIdea() {
         let ideaID = idea.id
-        let descriptor = FetchDescriptor<IdeaLink>()
-        if let links = try? modelContext.fetch(descriptor) {
-            links.filter { $0.ideaAID == ideaID || $0.ideaBID == ideaID }.forEach(modelContext.delete)
-        }
+        allLinks.filter { $0.sourceID == ideaID || $0.targetID == ideaID }.forEach(modelContext.delete)
+        children.forEach { $0.parentID = nil }
         modelContext.delete(idea); try? modelContext.save(); close()
     }
 }

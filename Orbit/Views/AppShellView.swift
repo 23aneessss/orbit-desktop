@@ -35,7 +35,7 @@ struct AppShellView: View {
     @AppStorage("orbit:sidebar-collapsed") private var sidebarCollapsed = false
     @AppStorage("orbit:theme") private var themePreference = "system"
     @AppStorage("orbit:accent") private var accentHex = "#8B5CF6"
-    @State private var selection: OrbitSection = .habits
+    @State private var selection: OrbitSection = .home
     @State private var commandPalettePresented = false
     @State private var requestedIdeaID: UUID?
     @State private var requestedContactID: UUID?

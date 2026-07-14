@@ -29,7 +29,7 @@ struct IdeaCanvasView: View {
         Group {
             if let openedIdeaID,
                let idea = ideas.first(where: { $0.id == openedIdeaID }) {
-                IdeaEditorView(idea: idea) { self.openedIdeaID = nil }
+                IdeaEditorView(idea: idea, openIdea: { self.openedIdeaID = $0 }) { self.openedIdeaID = nil }
             } else {
                 canvasContent
             }
@@ -76,6 +76,7 @@ struct IdeaCanvasView: View {
                     ForEach(ideas) { idea in
                         CanvasIdeaNode(
                             idea: idea,
+                            childCount: ideas.count { $0.parentID == idea.id },
                             zoom: zoom,
                             pan: pan,
                             selected: selectedIdeaID == idea.id,
@@ -175,7 +176,7 @@ struct IdeaCanvasView: View {
     private func addIdea(at screenPoint: CGPoint? = nil) {
         let screen = screenPoint ?? CGPoint(x: 520, y: 300)
         let world = CGPoint(x: (screen.x - pan.width) / zoom, y: (screen.y - pan.height) / zoom)
-        let idea = Idea(title: "Untitled", content: "Nothing written yet.", canvasX: world.x, canvasY: world.y)
+        let idea = Idea(title: "Untitled", content: "", canvasX: world.x, canvasY: world.y)
         modelContext.insert(idea); try? modelContext.save(); selectedIdeaID = idea.id
     }
 
@@ -200,9 +201,7 @@ struct IdeaCanvasView: View {
         }
         defer { connectionSourceID = nil; connectionStart = nil; connectionEnd = nil; selectedIdeaID = nil }
         guard let target else { return }
-        let duplicate = links.contains {
-            ($0.ideaAID == source.id && $0.ideaBID == target.id) || ($0.ideaAID == target.id && $0.ideaBID == source.id)
-        }
+        let duplicate = links.contains { $0.sourceID == source.id && $0.targetID == target.id }
         if !duplicate { modelContext.insert(IdeaLink(ideaAID: source.id, ideaBID: target.id)) }
         try? modelContext.save()
     }
@@ -226,6 +225,7 @@ struct IdeaCanvasView: View {
     private func deleteSelected() {
         guard let selectedIdeaID, let idea = ideas.first(where: { $0.id == selectedIdeaID }) else { return }
         links.filter { $0.ideaAID == selectedIdeaID || $0.ideaBID == selectedIdeaID }.forEach(modelContext.delete)
+        ideas.filter { $0.parentID == selectedIdeaID }.forEach { $0.parentID = nil }
         modelContext.delete(idea); try? modelContext.save()
         self.selectedIdeaID = nil; connectionSourceID = nil
     }
@@ -240,11 +240,8 @@ struct IdeaCanvasView: View {
     private func merge(dragged: Idea, into target: Idea) {
         let removedID = dragged.id
         let targetID = target.id
-        let neighbors = Set(links.compactMap { link -> UUID? in
-            if link.ideaAID == removedID { return link.ideaBID }
-            if link.ideaBID == removedID { return link.ideaAID }
-            return nil
-        }).subtracting([targetID])
+        let outgoingTargets = Set(links.filter { $0.sourceID == removedID }.map(\.targetID)).subtracting([targetID])
+        let incomingSources = Set(links.filter { $0.targetID == removedID }.map(\.sourceID)).subtracting([targetID])
 
         if target.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { target.title = dragged.title }
         if !dragged.content.isEmpty {
@@ -253,12 +250,17 @@ struct IdeaCanvasView: View {
         target.tags = Array(Set(target.tags + dragged.tags)).sorted()
         target.updatedAt = .now
 
+        if target.parentID == removedID { target.parentID = dragged.parentID }
+        ideas.filter { $0.parentID == removedID && $0.id != targetID }.forEach { $0.parentID = targetID }
+
         links.filter { $0.ideaAID == removedID || $0.ideaBID == removedID }.forEach(modelContext.delete)
-        for neighbor in neighbors {
-            let exists = links.contains {
-                ($0.ideaAID == targetID && $0.ideaBID == neighbor) || ($0.ideaAID == neighbor && $0.ideaBID == targetID)
-            }
+        for neighbor in outgoingTargets {
+            let exists = links.contains { $0.sourceID == targetID && $0.targetID == neighbor }
             if !exists { modelContext.insert(IdeaLink(ideaAID: targetID, ideaBID: neighbor)) }
+        }
+        for neighbor in incomingSources {
+            let exists = links.contains { $0.sourceID == neighbor && $0.targetID == targetID }
+            if !exists { modelContext.insert(IdeaLink(ideaAID: neighbor, ideaBID: targetID)) }
         }
         modelContext.delete(dragged); try? modelContext.save()
         selectedIdeaID = targetID; connectionSourceID = nil; mergeCandidate = nil
@@ -298,10 +300,12 @@ private struct CanvasEdges: View {
             let ideasByID = Dictionary(uniqueKeysWithValues: ideas.map { ($0.id, $0) })
             for link in links {
                 guard let a = ideasByID[link.ideaAID], let b = ideasByID[link.ideaBID],
-                      let path = ideaLinkPath(from: a, to: b, pan: pan, zoom: zoom) else { continue }
+                      let geometry = ideaLinkGeometry(from: a, to: b, pan: pan, zoom: zoom) else { continue }
                 let selected = selectedLinkID == link.id
-                context.stroke(path, with: .color(OrbitTheme.accent.opacity(selected ? 0.9 : 0.34)),
+                let color = OrbitTheme.accent.opacity(selected ? 0.9 : 0.42)
+                context.stroke(geometry.path, with: .color(color),
                                style: StrokeStyle(lineWidth: max(selected ? 2.8 : 1, (selected ? 2.8 : 1.6) * zoom), lineCap: .round))
+                context.fill(geometry.arrow, with: .color(color))
             }
         }
     }
@@ -319,9 +323,9 @@ private struct CanvasEdgeHitLayer: View {
         ZStack {
             ForEach(links) { link in
                 if let a = ideasByID[link.ideaAID], let b = ideasByID[link.ideaBID],
-                   let path = ideaLinkPath(from: a, to: b, pan: pan, zoom: zoom) {
-                    path.stroke(Color.black.opacity(0.001), style: StrokeStyle(lineWidth: 14, lineCap: .round))
-                        .contentShape(path.strokedPath(StrokeStyle(lineWidth: 14, lineCap: .round)))
+                   let geometry = ideaLinkGeometry(from: a, to: b, pan: pan, zoom: zoom) {
+                    geometry.path.stroke(Color.black.opacity(0.001), style: StrokeStyle(lineWidth: 14, lineCap: .round))
+                        .contentShape(geometry.path.strokedPath(StrokeStyle(lineWidth: 14, lineCap: .round)))
                         .onTapGesture { select(link.id) }
                         .help("Select link")
                 }
@@ -330,7 +334,12 @@ private struct CanvasEdgeHitLayer: View {
     }
 }
 
-private func ideaLinkPath(from a: Idea, to b: Idea, pan: CGSize, zoom: CGFloat) -> Path? {
+private struct IdeaLinkGeometry {
+    let path: Path
+    let arrow: Path
+}
+
+private func ideaLinkGeometry(from a: Idea, to b: Idea, pan: CGSize, zoom: CGFloat) -> IdeaLinkGeometry? {
     guard let ax = a.canvasX, let ay = a.canvasY, let bx = b.canvasX, let by = b.canvasY else { return nil }
     let aCenter = CGPoint(x: ax * zoom + pan.width, y: ay * zoom + pan.height)
     let bCenter = CGPoint(x: bx * zoom + pan.width, y: by * zoom + pan.height)
@@ -344,12 +353,24 @@ private func ideaLinkPath(from a: Idea, to b: Idea, pan: CGSize, zoom: CGFloat) 
     let start = borderPoint(from: aCenter, toward: bCenter)
     let end = borderPoint(from: bCenter, toward: aCenter)
     let bend = max(38 * zoom, abs(end.x - start.x) * 0.42)
+    let control2 = CGPoint(x: end.x - (end.x >= start.x ? bend : -bend), y: end.y)
     var path = Path()
     path.move(to: start)
     path.addCurve(to: end,
                   control1: CGPoint(x: start.x + (end.x >= start.x ? bend : -bend), y: start.y),
-                  control2: CGPoint(x: end.x - (end.x >= start.x ? bend : -bend), y: end.y))
-    return path
+                  control2: control2)
+
+    let angle = atan2(end.y - control2.y, end.x - control2.x)
+    let arrowLength = max(7, 9 * zoom)
+    let arrowWidth = max(4, 5 * zoom)
+    let base = CGPoint(x: end.x - cos(angle) * arrowLength, y: end.y - sin(angle) * arrowLength)
+    let normal = CGPoint(x: -sin(angle) * arrowWidth, y: cos(angle) * arrowWidth)
+    var arrow = Path()
+    arrow.move(to: end)
+    arrow.addLine(to: CGPoint(x: base.x + normal.x, y: base.y + normal.y))
+    arrow.addLine(to: CGPoint(x: base.x - normal.x, y: base.y - normal.y))
+    arrow.closeSubpath()
+    return IdeaLinkGeometry(path: path, arrow: arrow)
 }
 
 struct CanvasConnectionPreview: View {
@@ -368,6 +389,7 @@ struct CanvasConnectionPreview: View {
 private struct CanvasIdeaNode: View {
     @Environment(\.colorScheme) private var scheme
     @Bindable var idea: Idea
+    let childCount: Int
     let zoom: CGFloat
     let pan: CGSize
     let selected: Bool
@@ -384,8 +406,13 @@ private struct CanvasIdeaNode: View {
             HStack(spacing: 6) {
                 if idea.pinned { Image(systemName: "pin.fill").foregroundStyle(OrbitTheme.accent) }
                 Text(idea.title.isEmpty ? "Untitled" : idea.title).font(.system(size: 13, weight: .semibold)).lineLimit(1)
+                Spacer(minLength: 4)
+                if childCount > 0 {
+                    Label("\(childCount)", systemImage: "doc.on.doc")
+                        .font(.system(size: 9.5, weight: .medium)).foregroundStyle(OrbitTheme.ink3(scheme))
+                }
             }
-            Text(idea.content.isEmpty ? "Nothing written yet." : idea.content)
+            Text(idea.contentExcerpt.isEmpty ? "Nothing written yet." : idea.contentExcerpt)
                 .font(.system(size: 11.5)).foregroundStyle(OrbitTheme.ink2(scheme)).lineLimit(3)
             HStack(spacing: 5) {
                 ForEach(idea.tags.prefix(2), id: \.self) { tag in

@@ -86,6 +86,7 @@ final class Idea {
     var updatedAt: Date
     var canvasX: Double?
     var canvasY: Double?
+    var parentID: UUID?
 
     init(
         id: UUID = UUID(),
@@ -96,7 +97,8 @@ final class Idea {
         createdAt: Date = .now,
         updatedAt: Date = .now,
         canvasX: Double? = nil,
-        canvasY: Double? = nil
+        canvasY: Double? = nil,
+        parentID: UUID? = nil
     ) {
         self.id = id
         self.title = title
@@ -107,6 +109,7 @@ final class Idea {
         self.updatedAt = updatedAt
         self.canvasX = canvasX
         self.canvasY = canvasY
+        self.parentID = parentID
     }
 
     var tags: [String] {
@@ -118,6 +121,17 @@ final class Idea {
             tagsJSON = (try? String(data: JSONEncoder().encode(newValue), encoding: .utf8)) ?? "[]"
         }
     }
+
+    var contentExcerpt: String {
+        content
+            .replacingOccurrences(of: #"```[\s\S]*?```"#, with: " ", options: .regularExpression)
+            .replacingOccurrences(of: #"!\[([^\]]*)\]\([^\)]*\)"#, with: "$1", options: .regularExpression)
+            .replacingOccurrences(of: #"\[([^\]]+)\]\([^\)]*\)"#, with: "$1", options: .regularExpression)
+            .replacingOccurrences(of: #"(?m)^\s{0,3}(#{1,6}|>|[-+*]|\d+\.)\s+"#, with: "", options: .regularExpression)
+            .replacingOccurrences(of: #"[*_~`]"#, with: "", options: .regularExpression)
+            .replacingOccurrences(of: #"\s+"#, with: " ", options: .regularExpression)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
 }
 
 @Model
@@ -127,11 +141,13 @@ final class IdeaLink {
     var ideaBID: UUID
     var createdAt: Date
 
+    var sourceID: UUID { ideaAID }
+    var targetID: UUID { ideaBID }
+
     init(id: UUID = UUID(), ideaAID: UUID, ideaBID: UUID, createdAt: Date = .now) {
-        let ordered = [ideaAID, ideaBID].sorted { $0.uuidString < $1.uuidString }
         self.id = id
-        self.ideaAID = ordered[0]
-        self.ideaBID = ordered[1]
+        self.ideaAID = ideaAID
+        self.ideaBID = ideaBID
         self.createdAt = createdAt
     }
 }

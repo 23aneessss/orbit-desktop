@@ -68,7 +68,7 @@ enum ImportService {
                 context.insert(HabitLog(id: item.id, dateKey: item.date, habit: habit, createdAt: item.createdAt ?? .now))
             }
             for item in backup.ideas {
-                context.insert(Idea(id: item.id, title: item.title, content: item.content, tags: item.tags, pinned: item.pinned, createdAt: item.createdAt ?? .now, updatedAt: item.updatedAt ?? .now, canvasX: item.canvasX, canvasY: item.canvasY))
+                context.insert(Idea(id: item.id, title: item.title, content: item.content, tags: item.tags, pinned: item.pinned, createdAt: item.createdAt ?? .now, updatedAt: item.updatedAt ?? .now, canvasX: item.canvasX, canvasY: item.canvasY, parentID: item.parentId))
             }
             for item in backup.ideaLinks {
                 context.insert(IdeaLink(id: item.id, ideaAID: item.ideaAId, ideaBID: item.ideaBId, createdAt: item.createdAt ?? .now))
@@ -116,6 +116,7 @@ enum ImportService {
         let contactIDs = Set(backup.contacts.map(\.id))
         guard backup.habitLogs.allSatisfy({ habitIDs.contains($0.habitId) }) else { throw ImportError.missingRelationship("habit") }
         guard backup.ideaLinks.allSatisfy({ ideaIDs.contains($0.ideaAId) && ideaIDs.contains($0.ideaBId) }) else { throw ImportError.missingRelationship("idea") }
+        guard backup.ideas.allSatisfy({ $0.parentId == nil || ($0.parentId != $0.id && ideaIDs.contains($0.parentId!)) }) else { throw ImportError.missingRelationship("idea page") }
         guard backup.taskSteps.allSatisfy({ taskIDs.contains($0.taskId) && ($0.parentId == nil || stepIDs.contains($0.parentId!)) }) else { throw ImportError.missingRelationship("task step") }
         guard backup.stepLinks.allSatisfy({ taskIDs.contains($0.taskId) && stepIDs.contains($0.sourceId) && stepIDs.contains($0.targetId) }) else { throw ImportError.missingRelationship("workflow") }
         guard backup.interactions.allSatisfy({ contactIDs.contains($0.contactId) }) else { throw ImportError.missingRelationship("contact") }
@@ -157,7 +158,7 @@ private struct Backup: Decodable {
 
 private struct HabitItem: Decodable { let id: UUID; let name, icon, color: String; let targetPerDay: Int?; let targetPerWeek: Int; let createdAt: Date? }
 private struct HabitLogItem: Decodable { let id, habitId: UUID; let date: String; let createdAt: Date? }
-private struct IdeaItem: Decodable { let id: UUID; let title, content: String; let tags: [String]; let pinned: Bool; let canvasX, canvasY: Double?; let createdAt, updatedAt: Date? }
+private struct IdeaItem: Decodable { let id: UUID; let title, content: String; let tags: [String]; let pinned: Bool; let parentId: UUID?; let canvasX, canvasY: Double?; let createdAt, updatedAt: Date? }
 private struct IdeaLinkItem: Decodable { let id, ideaAId, ideaBId: UUID; let createdAt: Date? }
 private struct TaskItem: Decodable { let id: UUID; let title, note: String; let done: Bool; let canvasX, canvasY: Double?; let createdAt, completedAt: Date? }
 private struct TaskStepItem: Decodable { let id, taskId: UUID; let parentId: UUID?; let title: String; let done: Bool; let orderIdx: Int; let canvasX, canvasY: Double?; let createdAt: Date? }

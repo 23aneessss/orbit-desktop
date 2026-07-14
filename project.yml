@@ -12,12 +12,18 @@ settings:
     INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.productivity
     MARKETING_VERSION: "1.0.0"
     CURRENT_PROJECT_VERSION: "1"
+packages:
+  MarkdownUI:
+    url: https://github.com/gonzalezreal/swift-markdown-ui
+    from: 2.4.1
 targets:
   Orbit:
     type: application
     platform: macOS
     sources:
       - Orbit
+    dependencies:
+      - package: MarkdownUI
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.orbit.desktop
