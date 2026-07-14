@@ -53,6 +53,46 @@ final class ImportServiceTests: XCTestCase {
         XCTAssertEqual(try context.fetch(FetchDescriptor<Idea>()).map(\.title), ["Keep me"])
     }
 
+    func testRestorePreservesNestedPagesAndDirectedIdeaLinks() throws {
+        let container = try makeContainer()
+        let context = container.mainContext
+        let parentID = UUID()
+        let childID = UUID()
+        let linkID = UUID()
+        let payload: [String: Any] = [
+            "app": "orbit", "version": "1.0.0", "habits": [], "habitLogs": [],
+            "ideas": [
+                ["id": parentID.uuidString, "title": "Parent", "content": "# Parent", "tags": [], "pinned": false],
+                ["id": childID.uuidString, "title": "Child", "content": "> Nested", "tags": [], "pinned": false, "parentId": parentID.uuidString]
+            ],
+            "ideaLinks": [["id": linkID.uuidString, "ideaAId": parentID.uuidString, "ideaBId": childID.uuidString]],
+            "tasks": [], "taskSteps": [], "stepLinks": [], "boardStrokes": [], "boardNotes": [], "contacts": [], "interactions": [], "settings": [:]
+        ]
+
+        _ = try ImportService.restore(data: try JSONSerialization.data(withJSONObject: payload), into: context)
+
+        let ideas = try context.fetch(FetchDescriptor<Idea>())
+        let links = try context.fetch(FetchDescriptor<IdeaLink>())
+        XCTAssertEqual(ideas.first(where: { $0.id == childID })?.parentID, parentID)
+        XCTAssertEqual(links.first?.sourceID, parentID)
+        XCTAssertEqual(links.first?.targetID, childID)
+    }
+
+    func testRestoreRejectsMissingIdeaParentWithoutDeletingCurrentData() throws {
+        let container = try makeContainer()
+        let context = container.mainContext
+        context.insert(Idea(title: "Keep me"))
+        try context.save()
+        let payload: [String: Any] = [
+            "app": "orbit", "version": "1.0.0", "habits": [], "habitLogs": [],
+            "ideas": [["id": UUID().uuidString, "title": "Orphan", "content": "", "tags": [], "pinned": false, "parentId": UUID().uuidString]],
+            "ideaLinks": [], "tasks": [], "taskSteps": [], "stepLinks": [], "boardStrokes": [], "boardNotes": [], "contacts": [], "interactions": [], "settings": [:]
+        ]
+
+        XCTAssertThrowsError(try ImportService.restore(data: try JSONSerialization.data(withJSONObject: payload), into: context))
+        XCTAssertEqual(try context.fetch(FetchDescriptor<Idea>()).map(\.title), ["Keep me"])
+    }
+
     private func makeContainer() throws -> ModelContainer {
         let schema = Schema([Habit.self, HabitLog.self, Idea.self, IdeaLink.self, OrbitTask.self, OrbitTaskStep.self, StepLink.self, BoardStroke.self, BoardNote.self, Contact.self, Interaction.self, AppSetting.self])
         return try ModelContainer(for: schema, configurations: [ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)])
