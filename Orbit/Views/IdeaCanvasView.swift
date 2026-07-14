@@ -66,6 +66,8 @@ struct IdeaCanvasView: View {
 
                     CanvasEdges(ideas: ideas, links: links, pan: pan, zoom: zoom, selectedLinkID: selectedLinkID)
                         .allowsHitTesting(false)
+                    CanvasHierarchyEdges(ideas: ideas, links: links, pan: pan, zoom: zoom)
+                        .allowsHitTesting(false)
                     CanvasEdgeHitLayer(ideas: ideas, links: links, pan: pan, zoom: zoom) { linkID in
                         selectedLinkID = linkID
                         selectedIdeaID = nil
@@ -329,6 +331,32 @@ private struct CanvasEdgeHitLayer: View {
                         .onTapGesture { select(link.id) }
                         .help("Select link")
                 }
+            }
+        }
+    }
+}
+
+private struct CanvasHierarchyEdges: View {
+    let ideas: [Idea]
+    let links: [IdeaLink]
+    let pan: CGSize
+    let zoom: CGFloat
+
+    var body: some View {
+        Canvas { context, _ in
+            let ideasByID = Dictionary(uniqueKeysWithValues: ideas.map { ($0.id, $0) })
+            for child in ideas {
+                guard let parentID = child.parentID,
+                      let parent = ideasByID[parentID],
+                      !links.contains(where: { $0.sourceID == parentID && $0.targetID == child.id }),
+                      let geometry = ideaLinkGeometry(from: parent, to: child, pan: pan, zoom: zoom) else { continue }
+                let color = OrbitTheme.accent.opacity(0.25)
+                context.stroke(
+                    geometry.path,
+                    with: .color(color),
+                    style: StrokeStyle(lineWidth: max(1, 1.4 * zoom), lineCap: .round, dash: [5, 5])
+                )
+                context.fill(geometry.arrow, with: .color(color))
             }
         }
     }

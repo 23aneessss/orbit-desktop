@@ -104,6 +104,7 @@ struct TasksView: View {
         modelContext.delete(task); try? modelContext.save()
     }
 
+
     private func seedTasksIfNeeded() {
         guard UserDefaults.standard.bool(forKey: "orbit:demo-data-enabled") else { return }
         guard !tasksSeeded else { return }
