@@ -207,7 +207,6 @@ private struct IdeaBrowserCard: View {
                             .font(.system(size: 10.5)).foregroundStyle(OrbitTheme.ink3(scheme)).lineLimit(1)
                     }
                     Spacer()
-                    Text(idea.updatedAt, style: .relative).font(.system(size: 10.5)).foregroundStyle(OrbitTheme.ink3(scheme))
                 }
             }
             .padding(16).frame(maxWidth: .infinity, minHeight: 154, alignment: .topLeading).contentShape(Rectangle())
