@@ -52,7 +52,7 @@ struct AppShellView: View {
             HabitProgress.count(on: today, in: logs.filter { $0.habit?.id == habit.id }) >= habit.targetPerDay
         }.count
     }
-    
+
 
     var body: some View {
         HStack(spacing: 0) {
@@ -102,6 +102,7 @@ struct AppShellView: View {
                 .frame(height: 64)
                 .transition(.opacity)
             }
+
 
             Button { commandPalettePresented = true } label: {
                 HStack(spacing: 11) {
