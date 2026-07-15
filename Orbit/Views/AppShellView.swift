@@ -124,6 +124,7 @@ struct AppShellView: View {
             .buttonStyle(.plain)
             .padding(.horizontal, sidebarCollapsed ? 10 : 16)
 
+
             if !sidebarCollapsed {
                 Text("MENU")
                     .font(.system(size: 10, weight: .semibold))
