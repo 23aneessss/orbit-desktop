@@ -13,6 +13,7 @@ enum OrbitSection: String, CaseIterable, Identifiable {
 
     var id: String { rawValue }
 
+
     var symbol: String {
         switch self {
         case .home: "house"
