@@ -10,6 +10,7 @@ enum OrbitSection: String, CaseIterable, Identifiable {
     case people = "People"
     case settings = "Settings"
 
+
     var id: String { rawValue }
 
     var symbol: String {
