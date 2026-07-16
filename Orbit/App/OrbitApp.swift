@@ -9,6 +9,7 @@ struct OrbitApp: App {
             HabitLog.self,
             Idea.self,
             IdeaLink.self,
+            IdeaFolder.self,
             OrbitTask.self,
             OrbitTaskStep.self,
             StepLink.self,

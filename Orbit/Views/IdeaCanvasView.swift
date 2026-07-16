@@ -12,7 +12,10 @@ struct IdeaCanvasView: View {
     @Environment(\.colorScheme) private var scheme
     @Query(sort: \Idea.createdAt) private var ideas: [Idea]
     @Query private var links: [IdeaLink]
+    @Query(sort: \IdeaFolder.name) private var folders: [IdeaFolder]
 
+    @State private var selectedFolderID: UUID?
+    @State private var selectedTags: Set<String> = []
     @State private var pan = CGSize.zero
     @State private var committedPan = CGSize.zero
     @State private var zoom: CGFloat = 1
@@ -24,6 +27,22 @@ struct IdeaCanvasView: View {
     @State private var connectionStart: CGPoint?
     @State private var connectionEnd: CGPoint?
     @State private var mergeCandidate: MergeCandidate?
+
+    private var visibleIdeas: [Idea] {
+        ideas.filter { idea in
+            let matchesFolder = selectedFolderID == nil || idea.folderID == selectedFolderID
+            let matchesTags = selectedTags.allSatisfy { idea.tags.contains($0) }
+            return matchesFolder && matchesTags
+        }
+    }
+
+    private var allTags: [String] {
+        let scoped = selectedFolderID == nil ? ideas : ideas.filter { $0.folderID == selectedFolderID }
+        let counts = scoped.flatMap(\.tags).reduce(into: [String: Int]()) { $0[$1, default: 0] += 1 }
+        return counts.sorted { lhs, rhs in
+            lhs.value == rhs.value ? lhs.key < rhs.key : lhs.value > rhs.value
+        }.map(\.key)
+    }
 
     var body: some View {
         Group {
@@ -37,6 +56,7 @@ struct IdeaCanvasView: View {
         .background(OrbitTheme.canvas(scheme))
         .task { tileUnplacedIdeas() }
         .onChange(of: ideas.map(\.id)) { tileUnplacedIdeas() }
+        .onChange(of: selectedFolderID) { selectedTags.formIntersection(allTags) }
         .sheet(item: $mergeCandidate) { candidate in
             if let dragged = ideas.first(where: { $0.id == candidate.draggedID }),
                let target = ideas.first(where: { $0.id == candidate.targetID }) {
@@ -64,18 +84,29 @@ struct IdeaCanvasView: View {
                             }
                         )
 
-                    CanvasEdges(ideas: ideas, links: links, pan: pan, zoom: zoom, selectedLinkID: selectedLinkID)
+                    CanvasEdges(ideas: visibleIdeas, links: links, pan: pan, zoom: zoom, selectedLinkID: selectedLinkID)
                         .allowsHitTesting(false)
-                    CanvasHierarchyEdges(ideas: ideas, links: links, pan: pan, zoom: zoom)
+                    CanvasHierarchyEdges(ideas: visibleIdeas, links: links, pan: pan, zoom: zoom)
                         .allowsHitTesting(false)
-                    CanvasEdgeHitLayer(ideas: ideas, links: links, pan: pan, zoom: zoom) { linkID in
+                    CanvasEdgeHitLayer(ideas: visibleIdeas, links: links, pan: pan, zoom: zoom) { linkID in
                         selectedLinkID = linkID
                         selectedIdeaID = nil
                     }
                     CanvasConnectionPreview(start: connectionStart, end: connectionEnd)
                         .allowsHitTesting(false)
 
-                    ForEach(ideas) { idea in
+                    if visibleIdeas.isEmpty, !ideas.isEmpty {
+                        VStack(spacing: 8) {
+                            Image(systemName: "line.3.horizontal.decrease.circle")
+                                .font(.system(size: 21)).foregroundStyle(OrbitTheme.ink3(scheme))
+                            Text("No ideas match the current filter.")
+                                .font(.system(size: 12.5)).foregroundStyle(OrbitTheme.ink2(scheme))
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .allowsHitTesting(false)
+                    }
+
+                    ForEach(visibleIdeas) { idea in
                         CanvasIdeaNode(
                             idea: idea,
                             childCount: ideas.count { $0.parentID == idea.id },
@@ -118,6 +149,39 @@ struct IdeaCanvasView: View {
                     .font(.system(size: 13.5)).foregroundStyle(OrbitTheme.ink2(scheme))
             }
             Spacer()
+            if !folders.isEmpty {
+                Menu {
+                    Picker("Folder", selection: $selectedFolderID) {
+                        Text("All ideas").tag(UUID?.none)
+                        ForEach(folders) { folder in
+                            Text(folder.name).tag(Optional(folder.id))
+                        }
+                    }
+                    .pickerStyle(.inline).labelsHidden()
+                } label: {
+                    Label(folders.first { $0.id == selectedFolderID }?.name ?? "All ideas", systemImage: "folder")
+                }
+                .buttonStyle(.bordered).fixedSize()
+                .help("Show only the ideas of one folder")
+            }
+            if !allTags.isEmpty {
+                Menu {
+                    ForEach(allTags, id: \.self) { tag in
+                        Toggle("#\(tag)", isOn: Binding(
+                            get: { selectedTags.contains(tag) },
+                            set: { if $0 { selectedTags.insert(tag) } else { selectedTags.remove(tag) } }
+                        ))
+                    }
+                    if !selectedTags.isEmpty {
+                        Divider()
+                        Button("Clear tags") { selectedTags = [] }
+                    }
+                } label: {
+                    Label(selectedTags.isEmpty ? "Tags" : "Tags · \(selectedTags.count)", systemImage: "number")
+                }
+                .buttonStyle(.bordered).fixedSize()
+                .help("Show only ideas carrying every selected tag")
+            }
             if selectedLinkID != nil {
                 Button(role: .destructive) { deleteSelectedLink() } label: { Label("Delete link", systemImage: "link.badge.minus") }
                     .buttonStyle(.bordered)
@@ -178,7 +242,7 @@ struct IdeaCanvasView: View {
     private func addIdea(at screenPoint: CGPoint? = nil) {
         let screen = screenPoint ?? CGPoint(x: 520, y: 300)
         let world = CGPoint(x: (screen.x - pan.width) / zoom, y: (screen.y - pan.height) / zoom)
-        let idea = Idea(title: "Untitled", content: "", canvasX: world.x, canvasY: world.y)
+        let idea = Idea(title: "Untitled", content: "", tags: selectedTags.sorted(), canvasX: world.x, canvasY: world.y, folderID: selectedFolderID)
         modelContext.insert(idea); try? modelContext.save(); selectedIdeaID = idea.id
     }
 
@@ -197,7 +261,7 @@ struct IdeaCanvasView: View {
     }
 
     private func finishConnection(from source: Idea, at screenPoint: CGPoint) {
-        let target = ideas.first { idea in
+        let target = visibleIdeas.first { idea in
             guard idea.id != source.id, let x = idea.canvasX, let y = idea.canvasY else { return false }
             return CGRect(x: x * zoom + pan.width - 112 * zoom, y: y * zoom + pan.height - 59 * zoom, width: 224 * zoom, height: 118 * zoom).insetBy(dx: -10, dy: -10).contains(screenPoint)
         }
@@ -212,7 +276,7 @@ struct IdeaCanvasView: View {
         try? modelContext.save()
         guard let x = idea.canvasX, let y = idea.canvasY else { return }
         let movedRect = CGRect(x: x - 112, y: y - 59, width: 224, height: 118)
-        let candidate = ideas.filter { $0.id != idea.id }.compactMap { target -> (Idea, CGFloat)? in
+        let candidate = visibleIdeas.filter { $0.id != idea.id }.compactMap { target -> (Idea, CGFloat)? in
             guard let targetX = target.canvasX, let targetY = target.canvasY else { return nil }
             let targetRect = CGRect(x: targetX - 112, y: targetY - 59, width: 224, height: 118)
             let overlap = movedRect.intersection(targetRect)

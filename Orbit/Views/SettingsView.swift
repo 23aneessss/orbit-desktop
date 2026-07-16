@@ -19,6 +19,7 @@ struct SettingsView: View {
     @Query private var logs: [HabitLog]
     @Query private var ideas: [Idea]
     @Query private var ideaLinks: [IdeaLink]
+    @Query private var ideaFolders: [IdeaFolder]
     @Query private var tasks: [OrbitTask]
     @Query private var steps: [OrbitTaskStep]
     @Query private var stepLinks: [StepLink]
@@ -165,10 +166,10 @@ struct SettingsView: View {
     private func setting(_ key: String) -> String? { settings.first(where: { $0.key == key })?.value }
     private func saveSetting(_ key: String, value: String) { if let existing = settings.first(where: { $0.key == key }) { existing.value = value } else { modelContext.insert(AppSetting(key: key, value: value)) }; try? modelContext.save() }
     private func setAccent(_ hex: String) { accentHex = hex; saveSetting("accent", value: hex) }
-    private func exportData() { do { try ExportService.export(habits: habits, habitLogs: logs, ideas: ideas, ideaLinks: ideaLinks, tasks: tasks, taskSteps: steps, stepLinks: stepLinks, boardStrokes: boardStrokes, boardNotes: boardNotes, contacts: contacts, interactions: interactions, settings: settings); exportMessage = "Export finished." } catch { exportMessage = "Could not export: \(error.localizedDescription)" } }
+    private func exportData() { do { try ExportService.export(habits: habits, habitLogs: logs, ideas: ideas, ideaLinks: ideaLinks, ideaFolders: ideaFolders, tasks: tasks, taskSteps: steps, stepLinks: stepLinks, boardStrokes: boardStrokes, boardNotes: boardNotes, contacts: contacts, interactions: interactions, settings: settings); exportMessage = "Export finished." } catch { exportMessage = "Could not export: \(error.localizedDescription)" } }
     private func importData() { do { if let summary = try ImportService.restore(into: modelContext) { exportMessage = summary.message } } catch { exportMessage = "Could not restore: \(error.localizedDescription)" } }
     private func wipeAllData() {
-        logs.forEach(modelContext.delete); habits.forEach(modelContext.delete); ideaLinks.forEach(modelContext.delete); ideas.forEach(modelContext.delete); stepLinks.forEach(modelContext.delete); boardStrokes.forEach(modelContext.delete); boardNotes.forEach(modelContext.delete); steps.forEach(modelContext.delete); tasks.forEach(modelContext.delete); interactions.forEach(modelContext.delete); contacts.forEach(modelContext.delete); try? modelContext.save()
+        logs.forEach(modelContext.delete); habits.forEach(modelContext.delete); ideaLinks.forEach(modelContext.delete); ideas.forEach(modelContext.delete); ideaFolders.forEach(modelContext.delete); stepLinks.forEach(modelContext.delete); boardStrokes.forEach(modelContext.delete); boardNotes.forEach(modelContext.delete); steps.forEach(modelContext.delete); tasks.forEach(modelContext.delete); interactions.forEach(modelContext.delete); contacts.forEach(modelContext.delete); try? modelContext.save()
         UserDefaults.standard.set(false, forKey: "orbit:demo-data-enabled")
         UserDefaults.standard.set(true, forKey: "orbit:tasks-seeded"); UserDefaults.standard.set(true, forKey: "orbit:people-seeded")
     }

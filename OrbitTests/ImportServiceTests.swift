@@ -94,7 +94,7 @@ final class ImportServiceTests: XCTestCase {
     }
 
     private func makeContainer() throws -> ModelContainer {
-        let schema = Schema([Habit.self, HabitLog.self, Idea.self, IdeaLink.self, OrbitTask.self, OrbitTaskStep.self, StepLink.self, BoardStroke.self, BoardNote.self, Contact.self, Interaction.self, AppSetting.self])
+        let schema = Schema([Habit.self, HabitLog.self, Idea.self, IdeaLink.self, IdeaFolder.self, OrbitTask.self, OrbitTaskStep.self, StepLink.self, BoardStroke.self, BoardNote.self, Contact.self, Interaction.self, AppSetting.self])
         return try ModelContainer(for: schema, configurations: [ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)])
     }
 }

@@ -67,8 +67,13 @@ enum ImportService {
                 guard let habit = habitsByID[item.habitId] else { throw ImportError.missingRelationship("habit log") }
                 context.insert(HabitLog(id: item.id, dateKey: item.date, habit: habit, createdAt: item.createdAt ?? .now))
             }
+            let folderIDs = Set((backup.ideaFolders ?? []).map(\.id))
+            for item in backup.ideaFolders ?? [] {
+                context.insert(IdeaFolder(id: item.id, name: item.name, createdAt: item.createdAt ?? .now))
+            }
             for item in backup.ideas {
-                context.insert(Idea(id: item.id, title: item.title, content: item.content, tags: item.tags, pinned: item.pinned, createdAt: item.createdAt ?? .now, updatedAt: item.updatedAt ?? .now, canvasX: item.canvasX, canvasY: item.canvasY, parentID: item.parentId))
+                let folderID = item.folderId.flatMap { folderIDs.contains($0) ? $0 : nil }
+                context.insert(Idea(id: item.id, title: item.title, content: item.content, tags: item.tags, pinned: item.pinned, createdAt: item.createdAt ?? .now, updatedAt: item.updatedAt ?? .now, canvasX: item.canvasX, canvasY: item.canvasY, parentID: item.parentId, folderID: folderID))
             }
             for item in backup.ideaLinks {
                 context.insert(IdeaLink(id: item.id, ideaAID: item.ideaAId, ideaBID: item.ideaBId, createdAt: item.createdAt ?? .now))
@@ -128,6 +133,7 @@ enum ImportService {
         try context.delete(model: Habit.self)
         try context.delete(model: IdeaLink.self)
         try context.delete(model: Idea.self)
+        try context.delete(model: IdeaFolder.self)
         try context.delete(model: StepLink.self)
         try context.delete(model: BoardStroke.self)
         try context.delete(model: BoardNote.self)
@@ -146,6 +152,7 @@ private struct Backup: Decodable {
     let habitLogs: [HabitLogItem]
     let ideas: [IdeaItem]
     let ideaLinks: [IdeaLinkItem]
+    let ideaFolders: [IdeaFolderItem]?
     let tasks: [TaskItem]
     let taskSteps: [TaskStepItem]
     let stepLinks: [StepLinkItem]
@@ -158,8 +165,9 @@ private struct Backup: Decodable {
 
 private struct HabitItem: Decodable { let id: UUID; let name, icon, color: String; let targetPerDay: Int?; let targetPerWeek: Int; let createdAt: Date? }
 private struct HabitLogItem: Decodable { let id, habitId: UUID; let date: String; let createdAt: Date? }
-private struct IdeaItem: Decodable { let id: UUID; let title, content: String; let tags: [String]; let pinned: Bool; let parentId: UUID?; let canvasX, canvasY: Double?; let createdAt, updatedAt: Date? }
+private struct IdeaItem: Decodable { let id: UUID; let title, content: String; let tags: [String]; let pinned: Bool; let parentId: UUID?; let folderId: UUID?; let canvasX, canvasY: Double?; let createdAt, updatedAt: Date? }
 private struct IdeaLinkItem: Decodable { let id, ideaAId, ideaBId: UUID; let createdAt: Date? }
+private struct IdeaFolderItem: Decodable { let id: UUID; let name: String; let createdAt: Date? }
 private struct TaskItem: Decodable { let id: UUID; let title, note: String; let done: Bool; let canvasX, canvasY: Double?; let createdAt, completedAt: Date? }
 private struct TaskStepItem: Decodable { let id, taskId: UUID; let parentId: UUID?; let title: String; let done: Bool; let orderIdx: Int; let canvasX, canvasY: Double?; let createdAt: Date? }
 private struct StepLinkItem: Decodable { let id, taskId, sourceId, targetId: UUID; let createdAt: Date? }

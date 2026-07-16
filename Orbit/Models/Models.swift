@@ -76,6 +76,19 @@ final class HabitLog {
 }
 
 @Model
+final class IdeaFolder {
+    @Attribute(.unique) var id: UUID
+    var name: String
+    var createdAt: Date
+
+    init(id: UUID = UUID(), name: String, createdAt: Date = .now) {
+        self.id = id
+        self.name = name
+        self.createdAt = createdAt
+    }
+}
+
+@Model
 final class Idea {
     @Attribute(.unique) var id: UUID
     var title: String
@@ -87,6 +100,7 @@ final class Idea {
     var canvasX: Double?
     var canvasY: Double?
     var parentID: UUID?
+    var folderID: UUID?
 
     init(
         id: UUID = UUID(),
@@ -98,7 +112,8 @@ final class Idea {
         updatedAt: Date = .now,
         canvasX: Double? = nil,
         canvasY: Double? = nil,
-        parentID: UUID? = nil
+        parentID: UUID? = nil,
+        folderID: UUID? = nil
     ) {
         self.id = id
         self.title = title
@@ -110,6 +125,7 @@ final class Idea {
         self.canvasX = canvasX
         self.canvasY = canvasY
         self.parentID = parentID
+        self.folderID = folderID
     }
 
     var tags: [String] {

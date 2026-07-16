@@ -5,33 +5,46 @@ struct IdeasView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.colorScheme) private var scheme
     @Query(sort: \Idea.updatedAt, order: .reverse) private var ideas: [Idea]
+    @Query(sort: \IdeaFolder.name) private var folders: [IdeaFolder]
     @Binding var requestedIdeaID: UUID?
 
     @State private var query = ""
-    @State private var selectedTag: String?
+    @State private var selectedTags: Set<String> = []
+    @State private var selectedFolderID: UUID?
     @State private var selectedIdeaID: UUID?
+    @State private var folderDraft = ""
+    @State private var creatingFolder = false
+    @State private var renamingFolder: IdeaFolder?
+    @State private var deletingFolder: IdeaFolder?
 
     init(requestedIdeaID: Binding<UUID?> = .constant(nil)) {
         _requestedIdeaID = requestedIdeaID
     }
 
+    private var scopedIdeas: [Idea] {
+        guard let selectedFolderID else { return ideas }
+        return ideas.filter { $0.folderID == selectedFolderID }
+    }
+
     private var filteredIdeas: [Idea] {
-        ideas.filter { idea in
+        let searching = !query.isEmpty || !selectedTags.isEmpty
+        return scopedIdeas.filter { idea in
             let matchesQuery = query.isEmpty
                 || idea.title.localizedStandardContains(query)
                 || idea.content.localizedStandardContains(query)
                 || idea.tags.contains(where: { $0.localizedStandardContains(query) })
-            let matchesTag = selectedTag == nil || idea.tags.contains(selectedTag!)
-            let matchesHierarchy = !query.isEmpty || selectedTag != nil || idea.parentID == nil
-            return matchesQuery && matchesTag && matchesHierarchy
+            let matchesTags = selectedTags.allSatisfy { idea.tags.contains($0) }
+            let matchesHierarchy = searching || idea.parentID == nil
+            let matchesRoot = searching || selectedFolderID != nil || idea.folderID == nil
+            return matchesQuery && matchesTags && matchesHierarchy && matchesRoot
         }
     }
 
     private var topTags: [String] {
-        let counts = ideas.flatMap(\.tags).reduce(into: [String: Int]()) { $0[$1, default: 0] += 1 }
+        let counts = scopedIdeas.flatMap(\.tags).reduce(into: [String: Int]()) { $0[$1, default: 0] += 1 }
         return counts.sorted { lhs, rhs in
             lhs.value == rhs.value ? lhs.key < rhs.key : lhs.value > rhs.value
-        }.prefix(10).map(\.key)
+        }.map(\.key)
     }
 
     var body: some View {
@@ -79,25 +92,28 @@ struct IdeasView: View {
                     .background(OrbitTheme.surface(scheme), in: RoundedRectangle(cornerRadius: 10))
                     .overlay { RoundedRectangle(cornerRadius: 10).stroke(OrbitTheme.line(scheme)) }
 
-                    ForEach(topTags.prefix(5), id: \.self) { tag in
-                        Button("#\(tag)") { selectedTag = selectedTag == tag ? nil : tag }
-                            .buttonStyle(.plain)
-                            .font(.system(size: 11.5, weight: .medium))
-                            .foregroundStyle(selectedTag == tag ? OrbitTheme.accent : OrbitTheme.ink2(scheme))
-                            .padding(.horizontal, 10).frame(height: 32)
-                            .background(selectedTag == tag ? OrbitTheme.accentSoft(scheme) : OrbitTheme.sunken(scheme),
-                                        in: Capsule())
+                    Button { folderDraft = ""; creatingFolder = true } label: {
+                        Label("New folder", systemImage: "folder.badge.plus")
+                            .font(.system(size: 11.5, weight: .medium)).foregroundStyle(OrbitTheme.ink2(scheme))
+                            .padding(.horizontal, 12).frame(height: 40)
+                            .background(OrbitTheme.surface(scheme), in: RoundedRectangle(cornerRadius: 10))
+                            .overlay { RoundedRectangle(cornerRadius: 10).stroke(OrbitTheme.line(scheme)) }
                     }
+                    .buttonStyle(.plain).help("Create a folder to organize ideas")
                 }
+
+                if !folders.isEmpty { folderStrip }
+                if !topTags.isEmpty { tagStrip }
 
                 if filteredIdeas.isEmpty {
                     emptyState
                 } else {
                     let pinned = filteredIdeas.filter(\.pinned)
+                    let openFolderName = folders.first { $0.id == selectedFolderID }?.name
                     if !pinned.isEmpty {
                         ideaSection(title: "Pinned", ideas: pinned)
                     }
-                    ideaSection(title: pinned.isEmpty ? "All ideas" : "Everything else", ideas: filteredIdeas.filter { !$0.pinned })
+                    ideaSection(title: pinned.isEmpty ? (openFolderName ?? "All ideas") : "Everything else", ideas: filteredIdeas.filter { !$0.pinned })
                 }
             }
             .padding(32)
@@ -105,6 +121,123 @@ struct IdeasView: View {
             .frame(maxWidth: .infinity)
         }
         .background(OrbitTheme.canvas(scheme))
+        .onChange(of: selectedFolderID) { selectedTags.formIntersection(topTags) }
+        .alert("New folder", isPresented: $creatingFolder) {
+            TextField("Folder name", text: $folderDraft)
+            Button("Create") { createFolder() }
+            Button("Cancel", role: .cancel) { folderDraft = "" }
+        }
+        .alert("Rename folder", isPresented: Binding(
+            get: { renamingFolder != nil },
+            set: { if !$0 { renamingFolder = nil } }
+        )) {
+            TextField("Folder name", text: $folderDraft)
+            Button("Rename") { renameFolder() }
+            Button("Cancel", role: .cancel) { renamingFolder = nil; folderDraft = "" }
+        }
+        .confirmationDialog(
+            "Delete folder “\(deletingFolder?.name ?? "")”?",
+            isPresented: Binding(get: { deletingFolder != nil }, set: { if !$0 { deletingFolder = nil } }),
+            titleVisibility: .visible
+        ) {
+            Button("Delete folder", role: .destructive) { deleteFolder() }
+        } message: {
+            Text("Ideas inside move back to All ideas. No idea is deleted.")
+        }
+    }
+
+    private var folderStrip: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                FolderChip(
+                    title: "All ideas",
+                    symbol: "tray.full",
+                    count: nil,
+                    selected: selectedFolderID == nil,
+                    open: { selectedFolderID = nil },
+                    drop: { moveIdea($0, to: nil) }
+                )
+                ForEach(folders) { folder in
+                    FolderChip(
+                        title: folder.name,
+                        symbol: "folder",
+                        count: ideas.count { $0.folderID == folder.id },
+                        selected: selectedFolderID == folder.id,
+                        open: { selectedFolderID = selectedFolderID == folder.id ? nil : folder.id },
+                        drop: { moveIdea($0, to: folder.id) }
+                    )
+                    .contextMenu {
+                        Button("Rename", systemImage: "pencil") { folderDraft = folder.name; renamingFolder = folder }
+                        Button("Delete", systemImage: "trash", role: .destructive) { deletingFolder = folder }
+                    }
+                }
+            }
+        }
+    }
+
+    private var tagStrip: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 7) {
+                ForEach(topTags, id: \.self) { tag in
+                    let active = selectedTags.contains(tag)
+                    Button("#\(tag)") {
+                        if active { selectedTags.remove(tag) } else { selectedTags.insert(tag) }
+                    }
+                    .buttonStyle(.plain)
+                    .font(.system(size: 11.5, weight: .medium))
+                    .foregroundStyle(active ? OrbitTheme.accent : OrbitTheme.ink2(scheme))
+                    .padding(.horizontal, 10).frame(height: 32)
+                    .background(active ? OrbitTheme.accentSoft(scheme) : OrbitTheme.sunken(scheme), in: Capsule())
+                }
+                if selectedTags.count > 1 {
+                    Button { selectedTags = [] } label: {
+                        Label("Clear", systemImage: "xmark")
+                    }
+                    .buttonStyle(.plain)
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(OrbitTheme.ink3(scheme))
+                    .padding(.horizontal, 9).frame(height: 32)
+                }
+            }
+        }
+    }
+
+    private func createFolder() {
+        let name = folderDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+        folderDraft = ""
+        guard !name.isEmpty else { return }
+        let folder = IdeaFolder(name: name)
+        modelContext.insert(folder)
+        try? modelContext.save()
+        selectedFolderID = folder.id
+    }
+
+    private func renameFolder() {
+        let name = folderDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let renamingFolder, !name.isEmpty {
+            renamingFolder.name = name
+            try? modelContext.save()
+        }
+        renamingFolder = nil
+        folderDraft = ""
+    }
+
+    private func deleteFolder() {
+        guard let deletingFolder else { return }
+        ideas.filter { $0.folderID == deletingFolder.id }.forEach { $0.folderID = nil }
+        if selectedFolderID == deletingFolder.id { selectedFolderID = nil }
+        modelContext.delete(deletingFolder)
+        try? modelContext.save()
+        self.deletingFolder = nil
+    }
+
+    @discardableResult
+    private func moveIdea(_ id: UUID, to folderID: UUID?) -> Bool {
+        guard let idea = ideas.first(where: { $0.id == id }), idea.folderID != folderID else { return false }
+        idea.folderID = folderID
+        idea.updatedAt = .now
+        try? modelContext.save()
+        return true
     }
 
     @ViewBuilder
@@ -118,9 +251,12 @@ struct IdeasView: View {
                             idea: idea,
                             childCount: self.ideas.count { $0.parentID == idea.id },
                             parentTitle: self.ideas.first { $0.id == idea.parentID }?.title,
+                            folders: folders,
                             open: { selectedIdeaID = idea.id },
-                            delete: { delete(idea) }
+                            delete: { delete(idea) },
+                            moveToFolder: { moveIdea(idea.id, to: $0) }
                         )
+                        .draggable(idea.id.uuidString)
                     }
                 }
             }
@@ -128,17 +264,21 @@ struct IdeasView: View {
     }
 
     private var emptyState: some View {
-        VStack(spacing: 12) {
-            Image(systemName: query.isEmpty && selectedTag == nil ? "lightbulb" : "magnifyingglass")
+        let unfiltered = query.isEmpty && selectedTags.isEmpty
+        let inFolder = selectedFolderID != nil
+        return VStack(spacing: 12) {
+            Image(systemName: unfiltered ? (inFolder ? "folder" : "lightbulb") : "magnifyingglass")
                 .font(.system(size: 21)).foregroundStyle(OrbitTheme.accent)
                 .frame(width: 48, height: 48).background(OrbitTheme.accentSoft(scheme), in: RoundedRectangle(cornerRadius: 13))
-            Text(query.isEmpty && selectedTag == nil ? "Capture your first idea" : "No ideas match")
+            Text(unfiltered ? (inFolder ? "This folder is empty" : "Capture your first idea") : "No ideas match")
                 .font(.system(size: 17, weight: .semibold))
-            Text(query.isEmpty && selectedTag == nil
-                 ? "A title is enough. You can shape the thought later."
-                 : "Try a different phrase or clear the active tag.")
+            Text(unfiltered
+                 ? (inFolder
+                    ? "Drag idea cards onto the folder chip above, or start a fresh idea here."
+                    : "A title is enough. You can shape the thought later.")
+                 : "Try a different phrase or clear the active tags.")
                 .font(.system(size: 12.5)).foregroundStyle(OrbitTheme.ink2(scheme))
-            if query.isEmpty && selectedTag == nil {
+            if unfiltered {
                 Button("New idea") { createIdea() }.buttonStyle(.borderedProminent).tint(OrbitTheme.accent)
             }
         }
@@ -146,7 +286,7 @@ struct IdeasView: View {
     }
 
     private func createIdea() {
-        let idea = Idea(title: "", content: "", canvasX: nil, canvasY: nil)
+        let idea = Idea(title: "", content: "", canvasX: nil, canvasY: nil, folderID: selectedFolderID)
         modelContext.insert(idea)
         try? modelContext.save()
         selectedIdeaID = idea.id
@@ -164,13 +304,52 @@ struct IdeasView: View {
     }
 }
 
+private struct FolderChip: View {
+    @Environment(\.colorScheme) private var scheme
+    let title: String
+    let symbol: String
+    let count: Int?
+    let selected: Bool
+    let open: () -> Void
+    let drop: (UUID) -> Bool
+    @State private var targeted = false
+
+    var body: some View {
+        Button(action: open) {
+            HStack(spacing: 6) {
+                Image(systemName: symbol).font(.system(size: 10.5))
+                Text(title)
+                if let count {
+                    Text("\(count)")
+                        .foregroundStyle(selected ? OrbitTheme.accent.opacity(0.75) : OrbitTheme.ink3(scheme))
+                        .monospacedDigit()
+                }
+            }
+            .font(.system(size: 11.5, weight: .medium))
+            .foregroundStyle(selected ? OrbitTheme.accent : OrbitTheme.ink2(scheme))
+            .padding(.horizontal, 11).frame(height: 32)
+            .background(selected || targeted ? OrbitTheme.accentSoft(scheme) : OrbitTheme.sunken(scheme), in: Capsule())
+            .overlay { Capsule().stroke(targeted ? OrbitTheme.accent : .clear, lineWidth: 1.5) }
+            .contentShape(Capsule())
+        }
+        .buttonStyle(.plain)
+        .dropDestination(for: String.self) { items, _ in
+            guard let id = items.first.flatMap(UUID.init(uuidString:)) else { return false }
+            return drop(id)
+        } isTargeted: { targeted = $0 }
+        .help(count == nil ? "Show every idea. Drop a card here to take it out of its folder." : "Open folder. Drop an idea card here to file it.")
+    }
+}
+
 private struct IdeaBrowserCard: View {
     @Environment(\.colorScheme) private var scheme
     @Bindable var idea: Idea
     let childCount: Int
     let parentTitle: String?
+    let folders: [IdeaFolder]
     let open: () -> Void
     let delete: () -> Void
+    let moveToFolder: (UUID?) -> Void
 
     var body: some View {
         Button(action: open) {
@@ -182,6 +361,18 @@ private struct IdeaBrowserCard: View {
                     Spacer()
                     Menu {
                         Button(idea.pinned ? "Unpin" : "Pin", systemImage: idea.pinned ? "pin.slash" : "pin") { idea.pinned.toggle() }
+                        if !folders.isEmpty {
+                            Menu("Move to folder") {
+                                ForEach(folders) { folder in
+                                    Button(folder.name) { moveToFolder(folder.id) }
+                                        .disabled(idea.folderID == folder.id)
+                                }
+                                if idea.folderID != nil {
+                                    Divider()
+                                    Button("Remove from folder") { moveToFolder(nil) }
+                                }
+                            }
+                        }
                         Divider()
                         Button("Delete", systemImage: "trash", role: .destructive, action: delete)
                     } label: {
@@ -206,6 +397,10 @@ private struct IdeaBrowserCard: View {
                         Label(parentTitle, systemImage: "arrow.turn.up.left")
                             .font(.system(size: 10.5)).foregroundStyle(OrbitTheme.ink3(scheme)).lineLimit(1)
                     }
+                    if let folderName = folders.first(where: { $0.id == idea.folderID })?.name {
+                        Label(folderName, systemImage: "folder")
+                            .font(.system(size: 10.5)).foregroundStyle(OrbitTheme.ink3(scheme)).lineLimit(1)
+                    }
                     Spacer()
                 }
             }
@@ -225,6 +420,7 @@ struct IdeaEditorView: View {
     let close: () -> Void
 
     @State private var tagDraft = ""
+    @FocusState private var tagFieldFocused: Bool
     @State private var saveState = "Saved"
     @State private var autosaveTask: Task<Void, Never>?
 
@@ -299,21 +495,58 @@ struct IdeaEditorView: View {
         }
     }
 
-    private var tags: some View {
-        HStack(spacing: 6) {
-            ForEach(idea.tags, id: \.self) { tag in
-                HStack(spacing: 4) {
-                    Text("#\(tag)")
-                    Button { removeTag(tag) } label: { Image(systemName: "xmark") }
-                        .buttonStyle(.plain).font(.system(size: 8, weight: .bold))
-                }
-                .font(.system(size: 11.5)).foregroundStyle(OrbitTheme.ink2(scheme))
-                .padding(.horizontal, 8).padding(.vertical, 5)
-                .background(OrbitTheme.sunken(scheme), in: Capsule())
+    private var tagSuggestions: [String] {
+        let current = Set(idea.tags)
+        var counts: [String: Int] = [:]
+        for other in allIdeas {
+            for tag in other.tags where !current.contains(tag) {
+                counts[tag, default: 0] += 1
             }
-            TextField("Add tag", text: $tagDraft)
-                .textFieldStyle(.plain).frame(width: 110)
-                .onSubmit(addTag)
+        }
+        let draft = tagDraft.trimmingCharacters(in: .whitespacesAndNewlines).lowercased().replacingOccurrences(of: "#", with: "")
+        return counts.keys
+            .filter { draft.isEmpty || $0.localizedStandardContains(draft) }
+            .sorted { lhs, rhs in
+                counts[lhs] == counts[rhs] ? lhs < rhs : counts[lhs, default: 0] > counts[rhs, default: 0]
+            }
+            .prefix(8)
+            .map { $0 }
+    }
+
+    private var tags: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 6) {
+                ForEach(idea.tags, id: \.self) { tag in
+                    HStack(spacing: 4) {
+                        Text("#\(tag)")
+                        Button { removeTag(tag) } label: { Image(systemName: "xmark") }
+                            .buttonStyle(.plain).font(.system(size: 8, weight: .bold))
+                    }
+                    .font(.system(size: 11.5)).foregroundStyle(OrbitTheme.ink2(scheme))
+                    .padding(.horizontal, 8).padding(.vertical, 5)
+                    .background(OrbitTheme.sunken(scheme), in: Capsule())
+                }
+                TextField("Add tag", text: $tagDraft)
+                    .textFieldStyle(.plain).frame(width: 110)
+                    .focused($tagFieldFocused)
+                    .onSubmit(addTag)
+            }
+            if tagFieldFocused || !tagDraft.isEmpty, !tagSuggestions.isEmpty {
+                HStack(spacing: 6) {
+                    Image(systemName: "tag")
+                        .font(.system(size: 9)).foregroundStyle(OrbitTheme.ink3(scheme))
+                        .help("Click an existing tag to add it")
+                    ForEach(tagSuggestions, id: \.self) { tag in
+                        Button { addExistingTag(tag) } label: {
+                            Text("#\(tag)")
+                                .font(.system(size: 11, weight: .medium)).foregroundStyle(OrbitTheme.accent)
+                                .padding(.horizontal, 8).padding(.vertical, 4)
+                                .background(OrbitTheme.accentSoft(scheme), in: Capsule())
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
         }
     }
 
@@ -455,6 +688,13 @@ struct IdeaEditorView: View {
         let tag = tagDraft.trimmingCharacters(in: .whitespacesAndNewlines).lowercased().replacingOccurrences(of: "#", with: "")
         guard !tag.isEmpty, !idea.tags.contains(tag) else { tagDraft = ""; return }
         idea.tags.append(tag); tagDraft = ""; scheduleSave()
+    }
+
+    private func addExistingTag(_ tag: String) {
+        guard !idea.tags.contains(tag) else { return }
+        idea.tags.append(tag)
+        tagDraft = ""
+        scheduleSave()
     }
 
     private func removeTag(_ tag: String) { idea.tags.removeAll { $0 == tag }; scheduleSave() }
