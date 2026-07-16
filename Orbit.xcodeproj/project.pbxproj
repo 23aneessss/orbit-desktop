@@ -23,6 +23,7 @@
 		C84CD846CA563A5CF677B913 /* TaskCompletionServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02F7E45F3FFC1304FBF4D383 /* TaskCompletionServiceTests.swift */; };
 		CA6E9744FE03121F63830BC5 /* HabitsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6C93F7462D5C0BD68900D13 /* HabitsView.swift */; };
 		CC6551206571FF3F046080C5 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = B24FD058B7D00E7C9D29DA78 /* Models.swift */; };
+		DACE70A7B59B4CFDC7359C43 /* AppIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = CB6EA1CF569ADED12529C446 /* AppIcon.icon */; };
 		DFA228DFFA78D438F8BA5FC8 /* AppShellView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88BEE77400DF7013C7622B39 /* AppShellView.swift */; };
 		E65C66D700AE1B182DC8BC7B /* OrbitApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5DFA77B4FD4DF15BC26FEA45 /* OrbitApp.swift */; };
 		F03996CBB18D50F3F5DC0948 /* IdeaCanvasView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01EBFA456712515A8DC008C /* IdeaCanvasView.swift */; };
@@ -61,6 +62,7 @@
 		A3B93F37C0E112C39B3A0891 /* SeedService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeedService.swift; sourceTree = "<group>"; };
 		A6C93F7462D5C0BD68900D13 /* HabitsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HabitsView.swift; sourceTree = "<group>"; };
 		B24FD058B7D00E7C9D29DA78 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
+		CB6EA1CF569ADED12529C446 /* AppIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = wrapper.icon; path = AppIcon.icon; sourceTree = "<group>"; };
 		D01EBFA456712515A8DC008C /* IdeaCanvasView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IdeaCanvasView.swift; sourceTree = "<group>"; };
 		E4EE5D477AB5624DD9F40103 /* ImportServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportServiceTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -80,6 +82,7 @@
 		00ECA7FF55D55998AD25B1CA /* Orbit */ = {
 			isa = PBXGroup;
 			children = (
+				CB6EA1CF569ADED12529C446 /* AppIcon.icon */,
 				20936134E6681D18358932B7 /* Assets.xcassets */,
 				C780FD695A6D5038F772063E /* App */,
 				CD0EBA264946CA289F19D651 /* Design */,
@@ -260,6 +263,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				DACE70A7B59B4CFDC7359C43 /* AppIcon.icon in Resources */,
 				33335E4F882F977DFA66C647 /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

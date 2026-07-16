@@ -31,6 +31,7 @@ struct SettingsView: View {
 
     @AppStorage("orbit:theme") private var themePreference = "system"
     @AppStorage("orbit:accent") private var accentHex = "#8B5CF6"
+    @AppStorage("orbit:app-icon") private var appIconStyle = "dark"
     @AppStorage("orbit:settings-section") private var selection: SettingsSection = .profile
     @State private var nameDraft = ""
     @State private var customAccent = OrbitTheme.accent
@@ -118,7 +119,38 @@ struct SettingsView: View {
                         .onChange(of: customAccent) { if let hex = customAccent.orbitHex() { setAccent(hex) } }
                 }
             }
+            VStack(alignment: .leading, spacing: 12) {
+                Text("App icon").font(.system(size: 15, weight: .semibold))
+                HStack(spacing: 12) {
+                    appIconButton("dark", asset: "AppIconDark", label: "Black")
+                    appIconButton("light", asset: "AppIconLight", label: "White")
+                }
+                Text("The Dock shows the selected icon while Orbit is running. When Orbit is closed, macOS falls back to the black default.")
+                    .font(.system(size: 11.5)).foregroundStyle(OrbitTheme.ink3(scheme))
+            }
         }
+    }
+
+    private func appIconButton(_ value: String, asset: String, label: String) -> some View {
+        let selected = appIconStyle == value
+        return Button {
+            appIconStyle = value
+            OrbitAppIcon.apply()
+        } label: {
+            VStack(spacing: 7) {
+                Image(asset)
+                    .resizable().scaledToFit().frame(width: 54, height: 54)
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .stroke(selected ? OrbitTheme.accent : OrbitTheme.line(scheme), lineWidth: selected ? 2 : 1)
+                    }
+                Text(label).font(.system(size: 11.5, weight: .medium))
+                    .foregroundStyle(selected ? OrbitTheme.accent : OrbitTheme.ink2(scheme))
+            }
+            .padding(6)
+        }
+        .buttonStyle(.plain)
     }
 
     private var dataSection: some View {

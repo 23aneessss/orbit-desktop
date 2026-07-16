@@ -1,5 +1,25 @@
+import AppKit
 import SwiftData
 import SwiftUI
+
+enum OrbitAppIcon {
+    /// Swaps the running app's Dock icon and also stamps the choice onto the app
+    /// bundle as a Finder custom icon, so it survives quitting the app.
+    static func apply() {
+        let bundlePath = Bundle.main.bundlePath
+        if UserDefaults.standard.string(forKey: "orbit:app-icon") == "light",
+           let light = NSImage(named: "AppIconLight") {
+            NSApp.applicationIconImage = light
+            // setIcon needs a concrete bitmap; asset-catalog images are lazy proxies
+            if let tiff = light.tiffRepresentation, let concrete = NSImage(data: tiff) {
+                NSWorkspace.shared.setIcon(concrete, forFile: bundlePath)
+            }
+        } else {
+            NSApp.applicationIconImage = nil
+            NSWorkspace.shared.setIcon(nil, forFile: bundlePath)
+        }
+    }
+}
 
 @main
 struct OrbitApp: App {
@@ -31,6 +51,7 @@ struct OrbitApp: App {
         WindowGroup {
             AppShellView()
                 .frame(minWidth: 1040, minHeight: 680)
+                .onAppear { OrbitAppIcon.apply() }
         }
         .modelContainer(container)
         .windowStyle(.hiddenTitleBar)
