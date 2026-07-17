@@ -208,6 +208,7 @@ struct AppShellView: View {
         .help(section.rawValue)
     }
 
+
     private var topbar: some View {
         HStack(spacing: 9) {
             Text("Orbit").foregroundStyle(OrbitTheme.ink3(scheme))
@@ -243,6 +244,7 @@ struct AppShellView: View {
         case .settings: SettingsView()
         }
     }
+
 
     private var preferredColorScheme: ColorScheme? {
         switch themePreference {
