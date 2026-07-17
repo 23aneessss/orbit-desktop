@@ -171,6 +171,7 @@ struct AppShellView: View {
         .clipped()
     }
 
+
     private var sidebarToggle: some View {
         Button {
             withAnimation(.easeOut(duration: 0.22)) { sidebarCollapsed.toggle() }
