@@ -286,6 +286,7 @@ private struct ProgressRing: View {
     }
 }
 
+
 private struct CommandPaletteView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.colorScheme) private var scheme
