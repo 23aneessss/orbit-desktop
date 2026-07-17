@@ -146,6 +146,7 @@ struct AppShellView: View {
             sidebarItem(.settings)
 
 
+
             if !sidebarCollapsed {
                 HStack(spacing: 12) {
                     ProgressRing(progress: habits.isEmpty ? 0 : Double(completedToday) / Double(habits.count))
