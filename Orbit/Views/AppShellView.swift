@@ -270,6 +270,7 @@ private struct OrbitLogo: View {
     }
 }
 
+
 private struct ProgressRing: View {
     let progress: Double
     var body: some View {
