@@ -372,3 +372,4 @@ private struct CommandPaletteView: View {
         try? modelContext.save()
     }
 }
+
