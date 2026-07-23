@@ -1,7 +1,7 @@
 ![Orbit connected workspace banner](docs/assets/readme-banner.png)
 
 <p align="center">
-  <img src="docs/assets/orbit-icon.png" width="112" height="112" alt="Orbit app icon">
+  <img src="docs/assets/orbit-icon-dark.svg" width="112" height="112" alt="Orbit app icon">
 </p>
 
 <h1 align="center">Orbit for macOS</h1>
