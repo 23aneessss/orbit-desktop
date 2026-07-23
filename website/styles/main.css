@@ -124,15 +124,6 @@ p { margin: 0; }
 }
 .kicker--center { text-align: center; }
 
-.eyebrow {
-  display: inline-flex; align-items: center; gap: 8px;
-  font-size: .82rem; font-weight: 600; letter-spacing: .02em; color: var(--ink-2);
-  padding: 7px 14px; border: 1px solid var(--line); border-radius: 999px;
-  background: color-mix(in srgb, var(--surface) 60%, transparent);
-  backdrop-filter: blur(8px);
-}
-.eyebrow .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--emerald); box-shadow: 0 0 10px var(--emerald); }
-
 /* ---------- buttons ---------- */
 .btn {
   --pad-y: 11px; --pad-x: 18px;
@@ -217,7 +208,7 @@ p { margin: 0; }
 .hero__content { text-align: left; }
 .hero__title {
   font-size: clamp(2.7rem, 1.2rem + 4.6vw, 4.6rem); font-weight: 700; letter-spacing: -.03em;
-  margin: 20px 0 22px;
+  margin: 0 0 22px;
 }
 .hero__sub { font-size: clamp(1rem, .95rem + .35vw, 1.16rem); color: var(--ink-2); max-width: 34rem; margin: 0; }
 .hero__cta { display: flex; gap: 14px; justify-content: flex-start; flex-wrap: wrap; margin: 34px 0 18px; }
