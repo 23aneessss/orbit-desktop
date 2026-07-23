@@ -246,20 +246,19 @@ function init() {
   const tmp = new THREE.Vector3();
   let rafId = null;
 
-  function place(s, t) {
-    const a = t * s.speed + s.phase;
-    s.g.position.set(Math.cos(a) * s.radius, 0, Math.sin(a) * s.radius);
+  // positions are fixed in the system's local space — only the depth cue updates
+  function depth(s) {
     const wz = s.g.getWorldPosition(tmp).z;
     const k = THREE.MathUtils.clamp((wz + 6) / 12, 0.2, 1);
     s.halo.material.opacity = (s.baseHalo ?? 0.2) * (0.5 + k);
-    s.g.scale.setScalar(0.82 + k * 0.34);   // depth cue
+    s.g.scale.setScalar(0.84 + k * 0.3);
   }
 
   function step() {
     const t = clock.getElapsedTime();
-    for (const s of sats) place(s, t);
+    system.rotation.y = t * SPIN;   // rigid rotation — relative angles never change
     planet.rotation.y = t * 0.12;
-    system.rotation.y = t * 0.035;
+    for (const s of sats) depth(s);
 
     cx += (tx - cx) * 0.05; cy += (ty - cy) * 0.05;
     system.rotation.z = cx * 0.14;
@@ -270,7 +269,7 @@ function init() {
   }
 
   if (reduceMotion) {
-    for (const s of sats) place(s, 0);
+    for (const s of sats) depth(s);
     renderer.render(scene, camera);
   } else {
     rafId = requestAnimationFrame(step);
