@@ -209,7 +209,7 @@ p { margin: 0; }
 .hero__content { width: min(100% - 44px, 860px); position: relative; }
 .hero__content::before {
   content: ""; position: absolute; inset: -10% -14% -6%; z-index: -1; pointer-events: none;
-  background: radial-gradient(58% 56% at 50% 44%, color-mix(in srgb, var(--bg) 74%, transparent), transparent 72%);
+  background: radial-gradient(56% 54% at 50% 44%, color-mix(in srgb, var(--bg) 84%, transparent), transparent 74%);
   filter: blur(16px);
 }
 .hero__title {
@@ -241,10 +241,19 @@ p { margin: 0; }
 }
 .pills__row li:hover { transform: translateY(-3px); border-color: color-mix(in srgb, var(--c, var(--accent)) 60%, var(--line)); }
 .pill__icon {
-  width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center; font-size: .95rem;
-  background: color-mix(in srgb, var(--c, var(--accent)) 16%, transparent);
+  width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center;
+  background: color-mix(in srgb, var(--c, var(--accent)) 14%, transparent);
   color: var(--c);
 }
+
+/* line icons */
+.ic { width: 1em; height: 1em; display: block; }
+.pill__icon .ic { width: 17px; height: 17px; }
+.card__ic { color: var(--c, var(--accent)); }
+.card__ic .ic { width: 21px; height: 21px; }
+.pm-ic { color: var(--c, var(--accent)); }
+.pm-ic .ic { width: 15px; height: 15px; }
+.mininode .ic { width: 14px; height: 14px; display: inline-block; vertical-align: -2px; margin-right: 6px; color: var(--accent); }
 
 /* ---------- feature sections ---------- */
 .feature {

@@ -107,7 +107,8 @@
       el.className = "mininode";
       el.style.left = n.x + "px";
       el.style.top = n.y + "px";
-      el.innerHTML = "💡 " + n.title + "<small>#" + n.tag + "</small><span class='miniport' data-port='" + n.id + "'></span>";
+      el.innerHTML = "<svg class='ic'><use href='#ic-ideas'/></svg>" + n.title +
+        "<small>#" + n.tag + "</small><span class='miniport' data-port='" + n.id + "'></span>";
       host.appendChild(el);
       els[n.id] = { el: el, node: n };
       n.el = el;

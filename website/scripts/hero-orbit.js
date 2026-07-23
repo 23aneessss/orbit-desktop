@@ -1,7 +1,7 @@
 // Orbit hero — a 3D orbit built with Three.js (core only).
-// A central "planet" with six feature satellites revolving on tilted elliptical
-// orbits, additive glow, a starfield, and pointer parallax.
-// Falls back gracefully when WebGL is unavailable or reduced motion is preferred.
+// A central planet with six feature nodes revolving on tilted elliptical orbits.
+// Nodes are camera-facing sprites: dark glass disc, thin colored rim, centered
+// line icon — so the glyph is always crisp and perfectly centred.
 
 import * as THREE from "three";
 
@@ -14,46 +14,121 @@ function showFallbackOnly() {
   if (fallback) fallback.style.opacity = "1";
 }
 
-// Feature satellites: [emoji, hex color, orbit radiusX, radiusZ, inclination(rad), speed, phase]
+/* ---- icon geometry, drawn in a 24×24 space (Lucide-style line icons) ---- */
+const ICONS = {
+  habits: (c) => {
+    c.stroke(new Path2D("M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5"));
+  },
+  ideas: (c) => {
+    c.stroke(new Path2D("M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"));
+    c.stroke(new Path2D("M9 18h6"));
+    c.stroke(new Path2D("M10 21h4"));
+  },
+  canvas: (c) => {
+    const dot = (x, y) => { c.beginPath(); c.arc(x, y, 2.8, 0, Math.PI * 2); c.stroke(); };
+    c.stroke(new Path2D("M8.6 13.5 15.4 17.5"));
+    c.stroke(new Path2D("M15.4 6.5 8.6 10.5"));
+    dot(18, 5); dot(6, 12); dot(18, 19);
+  },
+  tasks: (c) => {
+    c.stroke(new Path2D("M21.8 11.1V12a9.8 9.8 0 1 1-5.8-8.9"));
+    c.stroke(new Path2D("M21.5 4.5 12 14.1l-3-3"));
+  },
+  people: (c) => {
+    c.stroke(new Path2D("M16 20.5v-1.8a3.8 3.8 0 0 0-3.8-3.8H6.4a3.8 3.8 0 0 0-3.8 3.8v1.8"));
+    c.beginPath(); c.arc(9.3, 7.3, 3.8, 0, Math.PI * 2); c.stroke();
+    c.stroke(new Path2D("M21.5 20.5v-1.8a3.8 3.8 0 0 0-2.9-3.7"));
+    c.stroke(new Path2D("M15.8 3.7a3.8 3.8 0 0 1 0 7.3"));
+  },
+  command: (c) => {
+    c.stroke(new Path2D("M18 3a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3H6a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3V6a3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3h12a3 3 0 0 0 3-3 3 3 0 0 0-3-3"));
+  },
+};
+
+// Cohesive violet → blue → teal ramp (no rainbow).
 const FEATURES = [
-  ["🔥", 0x10b981, 3.1, 2.2, 0.20, 0.34, 0.0],
-  ["💡", 0xf59e0b, 4.3, 3.0, -0.32, 0.24, 1.1],
-  ["🕸️", 0x3d6df2, 5.5, 3.9, 0.14, 0.19, 2.4],
-  ["✓", 0xf43f5e, 2.4, 1.7, 0.42, 0.44, 3.3],
-  ["👥", 0x0ea5a8, 6.4, 4.6, -0.18, 0.15, 4.6],
-  ["⌘", 0x8b5cf6, 3.8, 5.2, 0.30, 0.28, 5.4],
+  // name,      color,     radiusX, radiusZ, inclination, speed, phase
+  ["habits",  0x8B5CF6, 6.7, 3.2, 0.20, 0.26, 0.0],
+  ["ideas",   0x6366F1, 7.5, 4.1, -0.28, 0.20, 1.15],
+  ["canvas",  0x3D6DF2, 8.4, 5.0, 0.13, 0.16, 2.45],
+  ["tasks",   0x0EA5E9, 7.0, 2.8, 0.38, 0.30, 3.35],
+  ["people",  0x0EA5A8, 9.0, 5.6, -0.17, 0.13, 4.65],
+  ["command", 0xB687FF, 7.9, 4.6, 0.28, 0.23, 5.45],
 ];
 
+function hexRGB(hex) {
+  const c = new THREE.Color(hex);
+  return [Math.round(c.r * 255), Math.round(c.g * 255), Math.round(c.b * 255)];
+}
+
 function radialTexture(hex) {
-  const s = 128;
-  const c = document.createElement("canvas");
-  c.width = c.height = s;
-  const ctx = c.getContext("2d");
-  const col = new THREE.Color(hex);
-  const r = Math.round(col.r * 255), g = Math.round(col.g * 255), b = Math.round(col.b * 255);
+  const s = 128, cv = document.createElement("canvas");
+  cv.width = cv.height = s;
+  const ctx = cv.getContext("2d");
+  const [r, g, b] = hexRGB(hex);
   const grad = ctx.createRadialGradient(s / 2, s / 2, 0, s / 2, s / 2, s / 2);
-  grad.addColorStop(0, `rgba(${r},${g},${b},0.95)`);
-  grad.addColorStop(0.25, `rgba(${r},${g},${b},0.55)`);
+  grad.addColorStop(0, `rgba(${r},${g},${b},0.85)`);
+  grad.addColorStop(0.3, `rgba(${r},${g},${b},0.36)`);
   grad.addColorStop(1, `rgba(${r},${g},${b},0)`);
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, s, s);
-  const t = new THREE.CanvasTexture(c);
+  const t = new THREE.CanvasTexture(cv);
   t.colorSpace = THREE.SRGBColorSpace;
   return t;
 }
 
-function iconTexture(glyph) {
-  const s = 128;
-  const c = document.createElement("canvas");
-  c.width = c.height = s;
-  const ctx = c.getContext("2d");
-  ctx.fillStyle = "#ffffff";
-  ctx.font = "600 66px -apple-system, 'SF Pro Display', system-ui, sans-serif";
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.fillText(glyph, s / 2, s / 2 + 4);
-  const t = new THREE.CanvasTexture(c);
+/* A camera-facing node: dark glass disc + thin colored rim + centred line icon. */
+function nodeTexture(name, hex) {
+  const S = 256, cv = document.createElement("canvas");
+  cv.width = cv.height = S;
+  const ctx = cv.getContext("2d");
+  const [r, g, b] = hexRGB(hex);
+  const cx = S / 2, cy = S / 2, R = 98;
+
+  // disc
+  ctx.beginPath();
+  ctx.arc(cx, cy, R, 0, Math.PI * 2);
+  ctx.fillStyle = "rgba(13,12,17,0.94)";
+  ctx.fill();
+
+  // top highlight
+  const hi = ctx.createLinearGradient(0, cy - R, 0, cy + R);
+  hi.addColorStop(0, "rgba(255,255,255,0.13)");
+  hi.addColorStop(0.55, "rgba(255,255,255,0)");
+  ctx.save(); ctx.clip(); ctx.fillStyle = hi; ctx.fillRect(0, 0, S, S); ctx.restore();
+
+  // rim
+  ctx.beginPath();
+  ctx.arc(cx, cy, R - 2, 0, Math.PI * 2);
+  ctx.strokeStyle = `rgba(${r},${g},${b},1)`;
+  ctx.lineWidth = 5;
+  ctx.stroke();
+
+  // subtle colored inner tint so the node reads as an object, not a hole
+  const tint = ctx.createRadialGradient(cx, cy - R * 0.3, 0, cx, cy, R);
+  tint.addColorStop(0, `rgba(${r},${g},${b},0.20)`);
+  tint.addColorStop(1, `rgba(${r},${g},${b},0.05)`);
+  ctx.save();
+  ctx.beginPath(); ctx.arc(cx, cy, R - 3, 0, Math.PI * 2); ctx.clip();
+  ctx.fillStyle = tint; ctx.fillRect(0, 0, S, S);
+  ctx.restore();
+
+  // icon — 24-unit space, centred
+  const box = 104, scale = box / 24;
+  ctx.save();
+  ctx.translate(cx - box / 2, cy - box / 2);
+  ctx.scale(scale, scale);
+  ctx.strokeStyle = "rgba(255,255,255,0.96)";
+  ctx.lineWidth = 1.75;
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  ctx.fillStyle = "transparent";
+  (ICONS[name] || ICONS.habits)(ctx);
+  ctx.restore();
+
+  const t = new THREE.CanvasTexture(cv);
   t.colorSpace = THREE.SRGBColorSpace;
+  t.anisotropy = 4;
   return t;
 }
 
@@ -61,14 +136,10 @@ function init() {
   let renderer;
   try {
     renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, powerPreference: "high-performance" });
-  } catch (e) {
-    showFallbackOnly();
-    return;
-  }
+  } catch (e) { showFallbackOnly(); return; }
   if (!renderer || !renderer.getContext()) { showFallbackOnly(); return; }
 
-  const DPR = Math.min(window.devicePixelRatio || 1, 2);
-  renderer.setPixelRatio(DPR);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
   renderer.setClearColor(0x000000, 0);
 
   const scene = new THREE.Scene();
@@ -76,186 +147,157 @@ function init() {
   camera.position.set(0, 1.6, 13.5);
   camera.lookAt(0, 0, 0);
 
-  // The whole orbital system — tilted, gently spinning, parallax-reactive.
   const system = new THREE.Group();
   system.rotation.x = 0.42;
-  system.position.y = 0.9; // lift the orbit so satellites clear the sub-headline
+  system.position.y = 0.9; // lift so nodes clear the sub-headline
   scene.add(system);
 
-  // ---- central planet ----
+  /* ---- central planet ---- */
   const planet = new THREE.Group();
   system.add(planet);
 
-  const sphereGeo = new THREE.SphereGeometry(1.15, 64, 64);
-  const sphereMat = new THREE.MeshStandardMaterial({
-    color: 0x7c53f0, emissive: 0x3a1d7a, emissiveIntensity: 0.55,
-    roughness: 0.35, metalness: 0.1,
-  });
-  const core = new THREE.Mesh(sphereGeo, sphereMat);
-  planet.add(core);
+  planet.add(new THREE.Mesh(
+    new THREE.SphereGeometry(0.95, 64, 64),
+    new THREE.MeshStandardMaterial({
+      color: 0x6d47d9, emissive: 0x2d1663, emissiveIntensity: 0.5,
+      roughness: 0.42, metalness: 0.15,
+    })
+  ));
 
-  // planet glow
   const planetGlow = new THREE.Sprite(new THREE.SpriteMaterial({
-    map: radialTexture(0x8b5cf6), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0.9,
+    map: radialTexture(0x7c5cf0), transparent: true, blending: THREE.AdditiveBlending,
+    depthWrite: false, opacity: 0.75,
   }));
-  planetGlow.scale.setScalar(5.4);
+  planetGlow.scale.setScalar(4.2);
   planet.add(planetGlow);
 
-  // orbit ring around the planet (the logo's ellipse)
-  const ringCurve = new THREE.EllipseCurve(0, 0, 2.1, 1.25, 0, Math.PI * 2);
-  const ringPts = ringCurve.getPoints(120).map((p) => new THREE.Vector3(p.x, p.y, 0));
+  const ringPts = new THREE.EllipseCurve(0, 0, 2.05, 1.2, 0, Math.PI * 2)
+    .getPoints(140).map((p) => new THREE.Vector3(p.x, p.y, 0));
   const ring = new THREE.LineLoop(
     new THREE.BufferGeometry().setFromPoints(ringPts),
-    new THREE.LineBasicMaterial({ color: 0xc3a8ff, transparent: true, opacity: 0.5 })
+    new THREE.LineBasicMaterial({ color: 0xcbb4ff, transparent: true, opacity: 0.42 })
   );
   ring.rotation.x = Math.PI / 2.1;
   ring.rotation.z = -0.5;
   planet.add(ring);
 
-  // ---- lights ----
-  scene.add(new THREE.AmbientLight(0x8877cc, 0.6));
-  const key = new THREE.PointLight(0xffffff, 1.4, 40);
-  key.position.set(6, 8, 10);
-  scene.add(key);
-  const rim = new THREE.PointLight(0x20a8ad, 1.1, 40);
-  rim.position.set(-8, -3, -6);
-  scene.add(rim);
+  /* ---- lights ---- */
+  scene.add(new THREE.AmbientLight(0x8f86c8, 0.65));
+  const key = new THREE.PointLight(0xffffff, 1.3, 40); key.position.set(6, 8, 10); scene.add(key);
+  const rim = new THREE.PointLight(0x20a8ad, 0.9, 40); rim.position.set(-8, -3, -6); scene.add(rim);
 
-  // ---- satellites ----
+  /* ---- feature nodes ---- */
   const sats = [];
-  for (const [glyph, color, rx, rz, incl, speed, phase] of FEATURES) {
+  for (const [name, color, rx, rz, incl, speed, phase] of FEATURES) {
     const g = new THREE.Group();
 
     const glow = new THREE.Sprite(new THREE.SpriteMaterial({
-      map: radialTexture(color), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0.8,
+      map: radialTexture(color), transparent: true, blending: THREE.AdditiveBlending,
+      depthWrite: false, opacity: 0.5,
     }));
-    glow.scale.setScalar(1.6);
+    glow.scale.setScalar(2.6);
     g.add(glow);
 
-    const chip = new THREE.Mesh(
-      new THREE.SphereGeometry(0.34, 32, 32),
-      new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 0.5, roughness: 0.4 })
-    );
-    g.add(chip);
-
-    const icon = new THREE.Sprite(new THREE.SpriteMaterial({
-      map: iconTexture(glyph), transparent: true, depthWrite: false, depthTest: false,
+    const node = new THREE.Sprite(new THREE.SpriteMaterial({
+      map: nodeTexture(name, color), transparent: true, depthWrite: false,
     }));
-    icon.scale.setScalar(0.5);
-    icon.position.z = 0.36;
-    g.add(icon);
+    node.scale.setScalar(1.1);
+    g.add(node);
 
-    // faint orbit path
-    const curve = new THREE.EllipseCurve(0, 0, rx, rz, 0, Math.PI * 2);
-    const pts = curve.getPoints(128).map((p) => new THREE.Vector3(p.x, 0, p.y));
+    const pts = new THREE.EllipseCurve(0, 0, rx, rz, 0, Math.PI * 2)
+      .getPoints(128).map((p) => new THREE.Vector3(p.x, 0, p.y));
     const path = new THREE.LineLoop(
       new THREE.BufferGeometry().setFromPoints(pts),
-      new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.14 })
+      new THREE.LineBasicMaterial({ color: 0x9aa4c4, transparent: true, opacity: 0.11 })
     );
+
     const holder = new THREE.Group();
     holder.rotation.x = incl;
-    holder.add(path);
-    holder.add(g);
+    holder.add(path, g);
     system.add(holder);
 
     sats.push({ g, rx, rz, speed, phase, glow });
   }
 
-  // ---- starfield ----
-  const starCount = window.innerWidth < 700 ? 260 : 620;
-  const starPos = new Float32Array(starCount * 3);
+  /* ---- starfield ---- */
+  const starCount = window.innerWidth < 700 ? 240 : 560;
+  const pos = new Float32Array(starCount * 3);
   for (let i = 0; i < starCount; i++) {
-    const r = 22 + Math.random() * 26;
-    const th = Math.random() * Math.PI * 2;
-    const ph = Math.acos(2 * Math.random() - 1);
-    starPos[i * 3] = r * Math.sin(ph) * Math.cos(th);
-    starPos[i * 3 + 1] = r * Math.sin(ph) * Math.sin(th);
-    starPos[i * 3 + 2] = r * Math.cos(ph) - 6;
+    const r = 22 + Math.random() * 26, th = Math.random() * Math.PI * 2, ph = Math.acos(2 * Math.random() - 1);
+    pos[i * 3] = r * Math.sin(ph) * Math.cos(th);
+    pos[i * 3 + 1] = r * Math.sin(ph) * Math.sin(th);
+    pos[i * 3 + 2] = r * Math.cos(ph) - 6;
   }
   const starGeo = new THREE.BufferGeometry();
-  starGeo.setAttribute("position", new THREE.BufferAttribute(starPos, 3));
+  starGeo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
   const stars = new THREE.Points(starGeo, new THREE.PointsMaterial({
-    color: 0xffffff, size: 0.06, transparent: true, opacity: 0.55, depthWrite: false,
+    color: 0xffffff, size: 0.055, transparent: true, opacity: 0.45, depthWrite: false,
   }));
   scene.add(stars);
 
-  // ---- sizing ----
+  /* ---- sizing ---- */
   function resize() {
     const w = canvas.clientWidth || window.innerWidth;
     const h = canvas.clientHeight || window.innerHeight;
     renderer.setSize(w, h, false);
     camera.aspect = w / h;
-    // pull the camera back a touch on narrow screens so nothing clips
     camera.position.z = w < 760 ? 17 : 13.5;
     camera.updateProjectionMatrix();
   }
   resize();
   window.addEventListener("resize", resize);
 
-  // ---- parallax ----
-  let targetX = 0, targetY = 0, curX = 0, curY = 0;
+  /* ---- parallax ---- */
+  let tx = 0, ty = 0, cx = 0, cy = 0;
   window.addEventListener("pointermove", (e) => {
-    targetX = (e.clientX / window.innerWidth - 0.5);
-    targetY = (e.clientY / window.innerHeight - 0.5);
+    tx = e.clientX / window.innerWidth - 0.5;
+    ty = e.clientY / window.innerHeight - 0.5;
   }, { passive: true });
 
   const clock = new THREE.Clock();
+  const tmp = new THREE.Vector3();
+  let rafId = null;
 
-  function frame() {
+  function step() {
     const t = clock.getElapsedTime();
-
     for (const s of sats) {
       const a = t * s.speed + s.phase;
       s.g.position.set(Math.cos(a) * s.rx, 0, Math.sin(a) * s.rz);
-      // depth cue: brighten & enlarge glow when closer to camera (world z)
-      const wz = s.g.getWorldPosition(new THREE.Vector3()).z;
+      const wz = s.g.getWorldPosition(tmp).z;
       const k = THREE.MathUtils.clamp((wz + 7) / 14, 0.25, 1);
-      s.glow.material.opacity = 0.4 + k * 0.6;
-      s.g.scale.setScalar(0.75 + k * 0.5);
+      s.glow.material.opacity = 0.22 + k * 0.4;
+      s.g.scale.setScalar(0.78 + k * 0.42);
     }
-
-    planet.rotation.y = t * 0.15;
-    system.rotation.y = t * 0.05;
+    planet.rotation.y = t * 0.14;
+    system.rotation.y = t * 0.045;
     stars.rotation.y = t * 0.01;
 
-    curX += (targetX - curX) * 0.05;
-    curY += (targetY - curY) * 0.05;
-    system.rotation.z = curX * 0.25;
-    system.rotation.x = 0.42 + curY * 0.22;
-    camera.position.x = curX * 1.4;
+    cx += (tx - cx) * 0.05;
+    cy += (ty - cy) * 0.05;
+    system.rotation.z = cx * 0.22;
+    system.rotation.x = 0.42 + cy * 0.2;
+    camera.position.x = cx * 1.3;
     camera.lookAt(0, 0, 0);
 
     renderer.render(scene, camera);
-    if (!reduceMotion) rafId = requestAnimationFrame(frame);
+    rafId = requestAnimationFrame(step);
   }
 
-  let rafId;
-  renderer.render(scene, camera);
   if (reduceMotion) {
-    // one composed frame, no animation loop
-    for (let i = 0; i < sats.length; i++) {
-      const s = sats[i], a = s.phase;
-      s.g.position.set(Math.cos(a) * s.rx, 0, Math.sin(a) * s.rz);
-    }
+    for (const s of sats) s.g.position.set(Math.cos(s.phase) * s.rx, 0, Math.sin(s.phase) * s.rz);
     renderer.render(scene, camera);
   } else {
-    rafId = requestAnimationFrame(frame);
-    // pause when the hero is off-screen to save the GPU
+    rafId = requestAnimationFrame(step);
     const hero = document.querySelector(".hero");
     if (hero && "IntersectionObserver" in window) {
       new IntersectionObserver((entries) => {
         for (const en of entries) {
-          if (en.isIntersecting && rafId == null) { rafId = requestAnimationFrame(frame); }
-          else if (!en.isIntersecting && rafId != null) { cancelAnimationFrame(rafId); rafId = null; }
+          if (en.isIntersecting && rafId === null) rafId = requestAnimationFrame(step);
+          else if (!en.isIntersecting && rafId !== null) { cancelAnimationFrame(rafId); rafId = null; }
         }
       }, { threshold: 0.01 }).observe(hero);
     }
   }
 }
 
-if (reduceMotion) {
-  // still draw a static scene for a nice first paint, but guard WebGL support
-  try { init(); } catch (e) { showFallbackOnly(); }
-} else {
-  try { init(); } catch (e) { showFallbackOnly(); }
-}
+try { init(); } catch (e) { showFallbackOnly(); }

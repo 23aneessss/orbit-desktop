@@ -22,6 +22,20 @@
 <body>
   <a class="skip-link" href="#features">Skip to content</a>
 
+  <!-- icon set (line icons, 24×24) -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs>
+    <symbol id="ic-habits" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5"/></symbol>
+    <symbol id="ic-ideas" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 21h4"/></symbol>
+    <symbol id="ic-canvas" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M8.6 13.5 15.4 17.5"/><path d="M15.4 6.5 8.6 10.5"/><circle cx="18" cy="5" r="2.8"/><circle cx="6" cy="12" r="2.8"/><circle cx="18" cy="19" r="2.8"/></symbol>
+    <symbol id="ic-tasks" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M21.8 11.1V12a9.8 9.8 0 1 1-5.8-8.9"/><path d="M21.5 4.5 12 14.1l-3-3"/></symbol>
+    <symbol id="ic-people" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M16 20.5v-1.8a3.8 3.8 0 0 0-3.8-3.8H6.4a3.8 3.8 0 0 0-3.8 3.8v1.8"/><circle cx="9.3" cy="7.3" r="3.8"/><path d="M21.5 20.5v-1.8a3.8 3.8 0 0 0-2.9-3.7"/><path d="M15.8 3.7a3.8 3.8 0 0 1 0 7.3"/></symbol>
+    <symbol id="ic-command" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M18 3a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3H6a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3V6a3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3h12a3 3 0 0 0 3-3 3 3 0 0 0-3-3"/></symbol>
+    <symbol id="ic-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10.5" width="16" height="10" rx="2.5"/><path d="M8 10.5V7a4 4 0 0 1 8 0v3.5"/></symbol>
+    <symbol id="ic-offline" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l18 18"/><path d="M9.2 17.2a4 4 0 0 1 5.6 0"/><path d="M2.5 9.4a14 14 0 0 1 4-2.5"/><path d="M10.5 5.6a14 14 0 0 1 11 3.8"/><path d="M6 13.2a9 9 0 0 1 2.6-1.7"/><path d="M16.2 11.9a9 9 0 0 1 1.9 1.3"/></symbol>
+    <symbol id="ic-backup" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 8.5v11a1.5 1.5 0 0 1-1.5 1.5H5a1.5 1.5 0 0 1-1.5-1.5v-11"/><rect x="2" y="3.5" width="20" height="5" rx="1.5"/><path d="M10 12.5h4"/></symbol>
+    <symbol id="ic-notrack" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l18 18"/><path d="M10.6 10.6a2.5 2.5 0 0 0 3.4 3.4"/><path d="M10.9 5.2A9.6 9.6 0 0 1 12 5.1c6 0 9.4 6.4 9.4 6.4a15 15 0 0 1-2.2 3.2"/><path d="M6.4 6.5A14.6 14.6 0 0 0 2.6 11.5s3.4 6.4 9.4 6.4a9 9 0 0 0 4.2-1"/></symbol>
+  </defs></svg>
+
   <!-- ============ NAV ============ -->
   <header class="nav" id="nav">
     <div class="nav__inner">
@@ -76,12 +90,12 @@
     <div class="wrap">
       <p class="pills__lead">Everything that usually lives in six different apps — in one.</p>
       <ul class="pills__row" id="pillsRow">
-        <li data-feature="habits"><span class="pill__icon" style="--c:var(--emerald)">🔥</span>Habits</li>
-        <li data-feature="ideas"><span class="pill__icon" style="--c:var(--amber)">💡</span>Ideas</li>
-        <li data-feature="canvas"><span class="pill__icon" style="--c:var(--cobalt)">🕸️</span>Canvas</li>
-        <li data-feature="tasks"><span class="pill__icon" style="--c:var(--rose)">✓</span>Tasks</li>
-        <li data-feature="people"><span class="pill__icon" style="--c:var(--teal)">👥</span>People</li>
-        <li data-feature="palette"><span class="pill__icon" style="--c:var(--accent)">⌘K</span>Command</li>
+        <li><span class="pill__icon" style="--c:#8B5CF6"><svg class="ic"><use href="#ic-habits"/></svg></span>Habits</li>
+        <li><span class="pill__icon" style="--c:#6366F1"><svg class="ic"><use href="#ic-ideas"/></svg></span>Ideas</li>
+        <li><span class="pill__icon" style="--c:#3D6DF2"><svg class="ic"><use href="#ic-canvas"/></svg></span>Canvas</li>
+        <li><span class="pill__icon" style="--c:#0EA5E9"><svg class="ic"><use href="#ic-tasks"/></svg></span>Tasks</li>
+        <li><span class="pill__icon" style="--c:#0EA5A8"><svg class="ic"><use href="#ic-people"/></svg></span>People</li>
+        <li><span class="pill__icon" style="--c:#B687FF"><svg class="ic"><use href="#ic-command"/></svg></span>Command</li>
       </ul>
     </div>
   </section>
@@ -221,10 +235,10 @@
     <div class="palette-mock" aria-hidden="true">
       <div class="palette-mock__field"><span class="palette-mock__q">Log habit: Deep work</span><span class="palette-mock__k">⌘K</span></div>
       <ul class="palette-mock__list">
-        <li class="is-active"><span class="pm-ic" style="--c:var(--emerald)">🔥</span> Log habit · Deep work <span class="pm-hint">↵</span></li>
-        <li><span class="pm-ic" style="--c:var(--amber)">💡</span> New idea</li>
-        <li><span class="pm-ic" style="--c:var(--cobalt)">🕸️</span> Open Canvas</li>
-        <li><span class="pm-ic" style="--c:var(--teal)">👥</span> Find person · Sara Mansouri</li>
+        <li class="is-active"><span class="pm-ic" style="--c:#8B5CF6"><svg class="ic"><use href="#ic-habits"/></svg></span> Log habit · Deep work <span class="pm-hint">↵</span></li>
+        <li><span class="pm-ic" style="--c:#6366F1"><svg class="ic"><use href="#ic-ideas"/></svg></span> New idea</li>
+        <li><span class="pm-ic" style="--c:#3D6DF2"><svg class="ic"><use href="#ic-canvas"/></svg></span> Open Canvas</li>
+        <li><span class="pm-ic" style="--c:#0EA5A8"><svg class="ic"><use href="#ic-people"/></svg></span> Find person · Sara Mansouri</li>
       </ul>
     </div>
   </section>
@@ -236,10 +250,10 @@
       <h2 class="center">Your life stays on your Mac</h2>
       <p class="center lead">No account. No server. No analytics. No telemetry. Orbit stores everything in a local database and works fully offline — forever.</p>
       <div class="privacy__grid">
-        <div class="card"><div class="card__ic" style="--c:var(--emerald)">🔒</div><h3>No account, ever</h3><p>Open the app and start. Nothing to sign up for, nothing to log in to.</p></div>
-        <div class="card"><div class="card__ic" style="--c:var(--cobalt)">📴</div><h3>Fully offline</h3><p>No network required. Your data never leaves the device unless you export it.</p></div>
-        <div class="card"><div class="card__ic" style="--c:var(--amber)">📦</div><h3>You own the data</h3><p>One-action, human-readable JSON backup and restore from Settings → Data.</p></div>
-        <div class="card"><div class="card__ic" style="--c:var(--rose)">🚫</div><h3>Zero telemetry</h3><p>No trackers, no ping-home, no hidden analytics. What you do is yours alone.</p></div>
+        <div class="card"><div class="card__ic" style="--c:#8B5CF6"><svg class="ic"><use href="#ic-lock"/></svg></div><h3>No account, ever</h3><p>Open the app and start. Nothing to sign up for, nothing to log in to.</p></div>
+        <div class="card"><div class="card__ic" style="--c:#3D6DF2"><svg class="ic"><use href="#ic-offline"/></svg></div><h3>Fully offline</h3><p>No network required. Your data never leaves the device unless you export it.</p></div>
+        <div class="card"><div class="card__ic" style="--c:#0EA5A8"><svg class="ic"><use href="#ic-backup"/></svg></div><h3>You own the data</h3><p>One-action, human-readable JSON backup and restore from Settings → Data.</p></div>
+        <div class="card"><div class="card__ic" style="--c:#6366F1"><svg class="ic"><use href="#ic-notrack"/></svg></div><h3>Zero telemetry</h3><p>No trackers, no ping-home, no hidden analytics. What you do is yours alone.</p></div>
       </div>
     </div>
   </section>
