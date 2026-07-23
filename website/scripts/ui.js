@@ -2,8 +2,8 @@
 (function () {
   "use strict";
 
-  // ⚠️ REPLACE OWNER/REPO with your GitHub repo. This always serves the newest release asset.
-  var DOWNLOAD_URL = "https://github.com/OWNER/REPO/releases/latest/download/Orbit.dmg";
+  // Always serves the newest release asset named Orbit.dmg.
+  var DOWNLOAD_URL = "https://github.com/23aneessss/orbit-desktop/releases/latest/download/Orbit.dmg";
 
   var reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
