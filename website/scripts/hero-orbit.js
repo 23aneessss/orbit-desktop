@@ -52,7 +52,12 @@ const ICONS = {
 };
 
 // Evenly spaced radii; tint is used only for a soft glow, never for the rim.
-const R0 = 2.35, STEP = 0.63, K = 1.45;
+//
+// Collision-free by construction: each node sits on its own radius AND at its own
+// fixed angle (360°/6 apart), and the entire system rotates as a RIGID body. The
+// relative geometry never changes, so two nodes can never drift into each other —
+// unlike per-orbit speeds, which always realign eventually.
+const R0 = 2.8, STEP = 0.62, SPIN = 0.16;
 const FEATURES = [
   ["habits",  0x8B5CF6],
   ["ideas",   0x6366F1],
@@ -175,10 +180,10 @@ function init() {
   const pathMats = [];
   FEATURES.forEach(([name, tint], i) => {
     const radius = R0 + i * STEP;
-    const speed = K / Math.pow(radius, 1.5);   // outer orbits move slower
-    const phase = i * (Math.PI * 2 / FEATURES.length);
+    const angle = i * (Math.PI * 2 / FEATURES.length);   // fixed, evenly spread
 
     const g = new THREE.Group();
+    g.position.set(Math.cos(angle) * radius, 0, Math.sin(angle) * radius);
 
     const halo = new THREE.Sprite(new THREE.SpriteMaterial({
       map: radialTexture(tint), transparent: true, blending: THREE.AdditiveBlending,
@@ -201,7 +206,7 @@ function init() {
     system.add(new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(pts), pathMat));
     system.add(g);
 
-    sats.push({ g, radius, speed, phase, halo });
+    sats.push({ g, radius, halo });
   });
 
   /* ---- theme adaptation (the page has a light/dark toggle) ---- */
