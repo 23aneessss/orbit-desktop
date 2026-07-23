@@ -15,7 +15,8 @@
   --teal: #0EA5A8;
   --indigo: #6366F1;
 
-  --grad: linear-gradient(120deg, var(--accent-2), var(--accent) 46%, var(--accent-3));
+  /* monochrome, brushed-metal — same family as the app icon's ivory ring */
+  --grad: linear-gradient(118deg, #FFFFFF, #E6E3DC 46%, #A8A399);
 
   --font: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text",
           "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -63,6 +64,7 @@
   --card-shadow: 0 1px 0 rgba(0,0,0,.02), 0 16px 40px -28px rgba(40,28,72,.35);
   --nav-bg: rgba(247,246,243,.72);
   --dot: rgba(20,18,16,.05);
+  --grad: linear-gradient(118deg, #2E2A25, #1C1A17 46%, #6F6B63);
   color-scheme: light;
 }
 
@@ -146,12 +148,14 @@ p { margin: 0; }
 .btn--xl { --pad-y: 17px; --pad-x: 30px; font-size: 1.08rem; border-radius: 14px; }
 
 .btn--primary {
-  color: #fff; background: var(--accent);
-  background-image: var(--grad); background-size: 160% 160%; background-position: 0% 50%;
-  box-shadow: 0 10px 30px -8px color-mix(in srgb, var(--accent) 65%, transparent);
+  color: var(--bg); background: var(--ink);
+  box-shadow: 0 10px 30px -12px rgba(0,0,0,.6);
 }
-.btn--primary:hover { transform: translateY(-2px); background-position: 100% 50%;
-  box-shadow: 0 16px 40px -8px color-mix(in srgb, var(--accent) 70%, transparent); }
+.btn--primary:hover {
+  transform: translateY(-2px);
+  background: color-mix(in srgb, var(--ink) 88%, var(--accent));
+  box-shadow: 0 16px 40px -14px rgba(0,0,0,.7);
+}
 .btn--ghost {
   color: var(--ink); background: color-mix(in srgb, var(--surface) 70%, transparent);
   border-color: var(--line-2); backdrop-filter: blur(8px);
@@ -197,7 +201,7 @@ p { margin: 0; }
 /* ambient depth, well away from the text column */
 .hero::before {
   content: ""; position: absolute; inset: 0; z-index: -2; pointer-events: none;
-  background: radial-gradient(46% 46% at 74% 46%, color-mix(in srgb, var(--accent) 15%, transparent), transparent 72%);
+  background: radial-gradient(46% 46% at 74% 46%, color-mix(in srgb, var(--ink) 7%, transparent), transparent 72%);
 }
 .hero::after { /* fade into the page */
   content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none;
@@ -350,7 +354,7 @@ kbd {
 
 /* ---------- privacy ---------- */
 .privacy { padding: clamp(64px,8vw,120px) 0; background:
-  radial-gradient(70% 60% at 50% 0%, color-mix(in srgb, var(--emerald) 8%, transparent), transparent 70%); }
+  radial-gradient(70% 60% at 50% 0%, color-mix(in srgb, var(--ink) 5%, transparent), transparent 70%); }
 .privacy__inner h2 { margin: 8px 0 14px; }
 .privacy__grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; margin-top: 44px; }
 .card {
@@ -375,7 +379,7 @@ kbd {
 }
 .native__steps li span {
   flex: 0 0 auto; width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center;
-  font-weight: 700; font-size: .9rem; color: #fff; background-image: var(--grad);
+  font-weight: 700; font-size: .9rem; color: var(--bg); background: var(--ink);
 }
 
 /* ---------- specs ---------- */
@@ -390,7 +394,7 @@ kbd {
 /* ---------- download ---------- */
 .download { position: relative; padding: clamp(80px,10vw,150px) 0; text-align: center; overflow: hidden; }
 .download__glow { position: absolute; inset: 0; z-index: 0; pointer-events: none;
-  background: radial-gradient(50% 60% at 50% 40%, color-mix(in srgb, var(--accent) 24%, transparent), transparent 70%); }
+  background: radial-gradient(50% 60% at 50% 40%, color-mix(in srgb, var(--ink) 9%, transparent), transparent 70%); }
 .download__inner { position: relative; z-index: 1; display: grid; justify-items: center; }
 .download__mark { border-radius: 20px; box-shadow: var(--glow); margin-bottom: 22px; }
 .download h2 { font-size: clamp(2rem, 1.2rem + 3vw, 3.4rem); margin-bottom: 14px; }

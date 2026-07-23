@@ -142,7 +142,7 @@ function init() {
       cv.width = cv.height = S;
       const c = cv.getContext("2d");
       c.beginPath(); c.arc(S / 2, S / 2, S / 2 - 8, 0, Math.PI * 2);
-      c.strokeStyle = `rgba(${IVORY},0.5)`; c.lineWidth = 4; c.stroke();
+      c.strokeStyle = "rgba(255,255,255,0.55)"; c.lineWidth = 4; c.stroke();
       const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; return t;
     })(),
     transparent: true, depthWrite: false, depthTest: false,
@@ -151,18 +151,16 @@ function init() {
   planet.add(limb);
 
   const glow = new THREE.Sprite(new THREE.SpriteMaterial({
-    map: radialTexture(0x8B5CF6), transparent: true, blending: THREE.AdditiveBlending,
-    depthWrite: false, opacity: 0.5,
+    map: radialTexture(0xCFC9BE), transparent: true, blending: THREE.AdditiveBlending,
+    depthWrite: false, opacity: 0.3,
   }));
-  glow.scale.setScalar(4.4);
+  glow.scale.setScalar(4.0);
   planet.add(glow);
 
   const ringPts = new THREE.EllipseCurve(0, 0, 1.95, 1.15, 0, Math.PI * 2)
     .getPoints(150).map((p) => new THREE.Vector3(p.x, p.y, 0));
-  const ring = new THREE.LineLoop(
-    new THREE.BufferGeometry().setFromPoints(ringPts),
-    new THREE.LineBasicMaterial({ color: 0xF1EFEB, transparent: true, opacity: 0.62 })
-  );
+  const ringMat = new THREE.LineBasicMaterial({ color: 0xF1EFEB, transparent: true, opacity: 0.62 });
+  const ring = new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(ringPts), ringMat);
   ring.rotation.x = Math.PI / 2.1;
   ring.rotation.z = -0.5;
   planet.add(ring);
@@ -174,6 +172,7 @@ function init() {
 
   /* ---- feature nodes on coplanar, evenly spaced circular orbits ---- */
   const sats = [];
+  const pathMats = [];
   FEATURES.forEach(([name, tint], i) => {
     const radius = R0 + i * STEP;
     const speed = K / Math.pow(radius, 1.5);   // outer orbits move slower
@@ -183,9 +182,9 @@ function init() {
 
     const halo = new THREE.Sprite(new THREE.SpriteMaterial({
       map: radialTexture(tint), transparent: true, blending: THREE.AdditiveBlending,
-      depthWrite: false, opacity: 0.34,
+      depthWrite: false, opacity: 0.2,
     }));
-    halo.scale.setScalar(2.3);
+    halo.scale.setScalar(2.1);
     g.add(halo);
 
     const node = new THREE.Sprite(new THREE.SpriteMaterial({
@@ -197,13 +196,28 @@ function init() {
     // the orbit path — same plane for every node
     const pts = new THREE.EllipseCurve(0, 0, radius, radius, 0, Math.PI * 2)
       .getPoints(160).map((p) => new THREE.Vector3(p.x, 0, p.y));
-    system.add(new THREE.LineLoop(
-      new THREE.BufferGeometry().setFromPoints(pts),
-      new THREE.LineBasicMaterial({ color: 0xF1EFEB, transparent: true, opacity: 0.1 })
-    ));
+    const pathMat = new THREE.LineBasicMaterial({ color: 0xF1EFEB, transparent: true, opacity: 0.1 });
+    pathMats.push(pathMat);
+    system.add(new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(pts), pathMat));
     system.add(g);
 
     sats.push({ g, radius, speed, phase, halo });
+  });
+
+  /* ---- theme adaptation (the page has a light/dark toggle) ---- */
+  function applyTheme() {
+    const light = document.documentElement.getAttribute("data-theme") === "light";
+    const lineCol = light ? 0x8A857C : 0xF1EFEB;
+    ringMat.color.setHex(light ? 0x4A453E : 0xF1EFEB);
+    ringMat.opacity = light ? 0.55 : 0.62;
+    pathMats.forEach((m) => { m.color.setHex(lineCol); m.opacity = light ? 0.3 : 0.1; });
+    limb.material.color.setHex(light ? 0x6F6B63 : 0xF1EFEB);
+    glow.material.opacity = light ? 0.1 : 0.3;
+    sats.forEach((s) => { s.baseHalo = light ? 0.1 : 0.2; });
+  }
+  applyTheme();
+  new MutationObserver(applyTheme).observe(document.documentElement, {
+    attributes: true, attributeFilter: ["data-theme"],
   });
 
   /* ---- sizing (square container) ---- */
@@ -232,7 +246,7 @@ function init() {
     s.g.position.set(Math.cos(a) * s.radius, 0, Math.sin(a) * s.radius);
     const wz = s.g.getWorldPosition(tmp).z;
     const k = THREE.MathUtils.clamp((wz + 6) / 12, 0.2, 1);
-    s.halo.material.opacity = 0.16 + k * 0.26;
+    s.halo.material.opacity = (s.baseHalo ?? 0.2) * (0.5 + k);
     s.g.scale.setScalar(0.82 + k * 0.34);   // depth cue
   }
 
