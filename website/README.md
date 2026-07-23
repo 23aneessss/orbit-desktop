@@ -17,14 +17,25 @@ website/
 └── vercel.json
 ```
 
-## Two things to set
+## Download link
 
-1. **Download link.** Open `scripts/ui.js` and replace `OWNER/REPO` in `DOWNLOAD_URL`
-   with your GitHub repo. The URL `…/releases/latest/download/Orbit.dmg` always serves
-   the newest release asset — just upload `Orbit.dmg` to a GitHub Release named so the
-   asset is `Orbit.dmg`.
-2. **(Optional) DMG size.** In `index.html`, the download line has a `#dmgSize` span you
-   can fill in (e.g. `24 MB`).
+The two "Download for macOS" buttons in `index.html` are plain `<a href>` pointing at:
+
+```
+https://github.com/23aneessss/orbit-desktop/releases/latest/download/Orbit.dmg
+```
+
+`latest/download/` always resolves to the newest release, so you never touch the site
+again — just publish a new release whose asset is named **`Orbit.dmg`**:
+
+```bash
+gh release create v1.1.0 dist/Orbit.dmg --title "Orbit 1.1.0" --notes "…"
+```
+
+The links are deliberately **not** injected by JavaScript: a plain href can't go stale
+against a cached script, and it still works with JS disabled. If you change the repo
+name, grep `index.html` for `releases/latest`. The displayed size lives in the
+`#dmgSize` span in `index.html`.
 
 ## Run locally
 

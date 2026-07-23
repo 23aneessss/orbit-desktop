@@ -2,13 +2,13 @@
 (function () {
   "use strict";
 
-  // Always serves the newest release asset named Orbit.dmg.
-  var DOWNLOAD_URL = "https://github.com/23aneessss/orbit-desktop/releases/latest/download/Orbit.dmg";
+  // NOTE: download links live directly in index.html (search "releases/latest").
+  // They are plain hrefs on purpose — no JS injection, so they can never go stale
+  // against a cached script and they work with JavaScript disabled.
 
   var reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   document.addEventListener("DOMContentLoaded", function () {
-    wireDownload();
     wireYear();
     wireThemeToggle();
     wireNavScroll();
@@ -16,15 +16,6 @@
     wireTilt();
     buildMiniCanvas();
   });
-
-  function wireDownload() {
-    document.querySelectorAll(".js-download").forEach(function (a) {
-      // keep the nav "Download" pointing to the section; make the real CTAs download
-      if (a.getAttribute("href") === "#download") return;
-      a.setAttribute("href", DOWNLOAD_URL);
-      a.setAttribute("rel", "noopener");
-    });
-  }
 
   function wireYear() {
     var y = document.getElementById("year");
