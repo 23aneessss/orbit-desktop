@@ -124,7 +124,7 @@ function init() {
 
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(46, 1, 0.1, 100);
-  camera.position.set(0, 0, 15);
+  camera.position.set(0, 0, 16.5);   // margin so the outer orbit never clips the frame
   camera.lookAt(0, 0, 0);
 
   const system = new THREE.Group();
