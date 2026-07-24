@@ -10,9 +10,7 @@ enum OrbitSection: String, CaseIterable, Identifiable {
     case people = "People"
     case settings = "Settings"
 
-
     var id: String { rawValue }
-
 
     var symbol: String {
         switch self {
@@ -52,7 +50,6 @@ struct AppShellView: View {
             HabitProgress.count(on: today, in: logs.filter { $0.habit?.id == habit.id }) >= habit.targetPerDay
         }.count
     }
-
 
     var body: some View {
         HStack(spacing: 0) {
@@ -171,7 +168,6 @@ struct AppShellView: View {
         .clipped()
     }
 
-
     private var sidebarToggle: some View {
         Button {
             withAnimation(.easeOut(duration: 0.22)) { sidebarCollapsed.toggle() }
@@ -207,7 +203,6 @@ struct AppShellView: View {
         .padding(.horizontal, sidebarCollapsed ? 9 : 16)
         .help(section.rawValue)
     }
-
 
     private var topbar: some View {
         HStack(spacing: 9) {
@@ -245,7 +240,6 @@ struct AppShellView: View {
         }
     }
 
-
     private var preferredColorScheme: ColorScheme? {
         switch themePreference {
         case "light": .light
@@ -270,7 +264,6 @@ private struct OrbitLogo: View {
     }
 }
 
-
 private struct ProgressRing: View {
     let progress: Double
     var body: some View {
@@ -285,10 +278,6 @@ private struct ProgressRing: View {
         .accessibilityValue("\(Int(progress * 100)) percent")
     }
 }
-
-
-
-
 
 private struct CommandPaletteView: View {
     @Environment(\.modelContext) private var modelContext
