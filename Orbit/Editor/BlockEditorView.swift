@@ -17,6 +17,7 @@ struct BlockEditorView: View {
     var openPage: ((UUID) -> Void)?
 
     @Environment(\.colorScheme) private var scheme
+    @Environment(\.orbitWidth) private var orbitWidth
     @StateObject private var focus = BlockFocus()
 
     @State private var blocks: [Block] = []
@@ -71,7 +72,7 @@ struct BlockEditorView: View {
                 marker(for: block)
                 content(for: block, isActive: isActive)
             }
-            .padding(.leading, CGFloat(block.indent) * 26)
+            .padding(.leading, CGFloat(block.indent) * (orbitWidth.isCompact ? 16 : 26))
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(.top, BlockTypography.spacingAbove(for: block.kind, isFirst: index == 0))
@@ -97,7 +98,7 @@ struct BlockEditorView: View {
             Rectangle()
                 .fill(OrbitTheme.accent)
                 .frame(height: 2)
-                .padding(.leading, 42)
+                .padding(.leading, orbitWidth.gutterWidth)
         }
     }
 
@@ -135,8 +136,8 @@ struct BlockEditorView: View {
         }
         .opacity(visible ? 1 : 0)
         .animation(.easeOut(duration: 0.1), value: visible)
-        .frame(width: 42, alignment: .trailing)
-        .padding(.trailing, 6)
+        .frame(width: orbitWidth.gutterWidth, alignment: .trailing)
+        .padding(.trailing, orbitWidth.isCompact ? 2 : 6)
         .padding(.top, gutterTopInset(for: block.kind))
     }
 

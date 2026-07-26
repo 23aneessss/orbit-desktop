@@ -15,6 +15,7 @@ private enum SettingsSection: String, CaseIterable, Identifiable {
 struct SettingsView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.colorScheme) private var scheme
+    @Environment(\.orbitWidth) private var orbitWidth
     @Query private var habits: [Habit]
     @Query private var logs: [HabitLog]
     @Query private var ideas: [Idea]
@@ -40,27 +41,7 @@ struct SettingsView: View {
     @State private var exportMessage: String?
 
     var body: some View {
-        HStack(spacing: 0) {
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Settings").font(.system(size: 22, weight: .semibold)).padding(.horizontal, 18).padding(.bottom, 14)
-                ForEach(SettingsSection.allCases) { section in
-                    Button { selection = section } label: {
-                        Label(section.rawValue, systemImage: section.symbol).frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.horizontal, 12).frame(height: 38)
-                            .background(selection == section ? OrbitTheme.accentSoft(scheme) : .clear, in: RoundedRectangle(cornerRadius: 9))
-                            .foregroundStyle(selection == section ? OrbitTheme.accent : OrbitTheme.ink2(scheme))
-                    }.buttonStyle(.plain)
-                }
-                Spacer()
-            }.padding(.vertical, 28).padding(.horizontal, 12).frame(width: 220).background(OrbitTheme.sunken(scheme).opacity(0.36))
-            Divider().overlay(OrbitTheme.line(scheme))
-            ScrollView {
-                VStack(alignment: .leading, spacing: 24) {
-                    Text(selection.rawValue).font(.system(size: 27, weight: .semibold))
-                    sectionContent
-                }.padding(36).frame(maxWidth: 800, alignment: .leading).frame(maxWidth: .infinity)
-            }
-        }
+        adaptiveShell
         .background(OrbitTheme.canvas(scheme))
         .onAppear { nameDraft = setting("name") ?? ""; customAccent = Color(hex: accentHex) }
         .confirmationDialog("Erase all Orbit data?", isPresented: $showingWipeConfirmation, titleVisibility: .visible) {
@@ -71,6 +52,62 @@ struct SettingsView: View {
             Button("Choose backup and replace data", role: .destructive) { importData() }
             Button("Cancel", role: .cancel) { }
         } message: { Text("Orbit validates the selected JSON file before replacing current personal content.") }
+    }
+
+    /// A 220pt rail plus content needs ~600pt to breathe. Below that the rail
+    /// becomes a segmented picker so the settings text keeps a usable column.
+    @ViewBuilder private var adaptiveShell: some View {
+        if orbitWidth.isCompact {
+            VStack(spacing: 0) {
+                Picker("Section", selection: $selection) {
+                    ForEach(SettingsSection.allCases) { Text($0.rawValue).tag($0) }
+                }
+                .pickerStyle(.segmented).labelsHidden()
+                .padding(.horizontal, 12).padding(.vertical, 10)
+                Divider().overlay(OrbitTheme.line(scheme))
+                detailPane
+            }
+        } else {
+            HStack(spacing: 0) {
+                sectionRail
+                Divider().overlay(OrbitTheme.line(scheme))
+                detailPane
+            }
+        }
+    }
+
+    private var sectionRail: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Settings").font(.system(size: 22, weight: .semibold))
+                .padding(.horizontal, 18).padding(.bottom, 14)
+            ForEach(SettingsSection.allCases) { section in
+                Button { selection = section } label: {
+                    Label(section.rawValue, systemImage: section.symbol)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, 12).frame(height: 38)
+                        .background(selection == section ? OrbitTheme.accentSoft(scheme) : .clear,
+                                    in: RoundedRectangle(cornerRadius: 9))
+                        .foregroundStyle(selection == section ? OrbitTheme.accent : OrbitTheme.ink2(scheme))
+                }
+                .buttonStyle(.plain)
+            }
+            Spacer()
+        }
+        .padding(.vertical, 28).padding(.horizontal, 12)
+        .frame(width: orbitWidth == .medium ? 178 : 220)
+        .background(OrbitTheme.sunken(scheme).opacity(0.36))
+    }
+
+    private var detailPane: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 24) {
+                Text(selection.rawValue).font(.system(size: 27, weight: .semibold))
+                sectionContent
+            }
+            .padding(orbitWidth.isCompact ? 18 : 36)
+            .frame(maxWidth: 800, alignment: .leading)
+            .frame(maxWidth: .infinity)
+        }
     }
 
     @ViewBuilder private var sectionContent: some View {
@@ -100,10 +137,19 @@ struct SettingsView: View {
         VStack(alignment: .leading, spacing: 24) {
             VStack(alignment: .leading, spacing: 12) {
                 Text("Theme").font(.system(size: 15, weight: .semibold))
-                HStack(spacing: 12) {
-                    themeButton("light", "sun.max", "Light")
-                    themeButton("dark", "moon", "Dark")
-                    themeButton("system", "circle.lefthalf.filled", "System")
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: 12) {
+                        themeButton("light", "sun.max", "Light")
+                        themeButton("dark", "moon", "Dark")
+                        themeButton("system", "circle.lefthalf.filled", "System")
+                    }
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 12) {
+                            themeButton("light", "sun.max", "Light")
+                            themeButton("dark", "moon", "Dark")
+                            themeButton("system", "circle.lefthalf.filled", "System")
+                        }
+                    }
                 }
             }
             VStack(alignment: .leading, spacing: 12) {

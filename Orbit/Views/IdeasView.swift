@@ -4,6 +4,7 @@ import SwiftUI
 struct IdeasView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.colorScheme) private var scheme
+    @Environment(\.orbitWidth) private var orbitWidth
     @Query(sort: \Idea.updatedAt, order: .reverse) private var ideas: [Idea]
     @Query(sort: \IdeaFolder.name) private var folders: [IdeaFolder]
     @Query private var settings: [AppSetting]
@@ -117,7 +118,7 @@ struct IdeasView: View {
                     ideaSection(title: pinned.isEmpty ? (openFolderName ?? "All ideas") : "Everything else", ideas: filteredIdeas.filter { !$0.pinned })
                 }
             }
-            .padding(32)
+            .padding(orbitWidth.pagePadding)
             .frame(maxWidth: 1220, alignment: .leading)
             .frame(maxWidth: .infinity)
         }
@@ -417,6 +418,7 @@ private struct IdeaBrowserCard: View {
 struct IdeaEditorView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.colorScheme) private var scheme
+    @Environment(\.orbitWidth) private var orbitWidth
     @Query(sort: \Idea.updatedAt, order: .reverse) private var allIdeas: [Idea]
     @Query private var allLinks: [IdeaLink]
     @Query private var settings: [AppSetting]
@@ -462,7 +464,7 @@ struct IdeaEditorView: View {
                     )
                     .onChange(of: idea.content) { scheduleSave() }
                 }
-                .padding(.horizontal, 54).padding(.top, 34).padding(.bottom, 8)
+                .padding(.horizontal, orbitWidth.readerPadding).padding(.top, orbitWidth.isCompact ? 20 : 34).padding(.bottom, 8)
                 .frame(maxWidth: 1000, alignment: .leading).frame(maxWidth: .infinity)
             }
         }
@@ -493,7 +495,7 @@ struct IdeaEditorView: View {
             Button(role: .destructive) { deleteIdea() } label: { Image(systemName: "trash") }
                 .buttonStyle(.plain).help("Delete idea")
         }
-        .padding(.horizontal, 28).frame(height: 54)
+        .padding(.horizontal, orbitWidth.isCompact ? 14 : 28).frame(height: 54)
     }
 
     @ViewBuilder private var pageBreadcrumb: some View {
@@ -656,7 +658,7 @@ struct IdeaEditorView: View {
             .buttonStyle(.bordered).controlSize(.small).fixedSize()
         }
         .padding(16)
-        .frame(width: 340, alignment: .leading)
+        .frame(width: orbitWidth.isCompact ? 300 : 340, alignment: .leading)
     }
 
     private func relationshipRow(

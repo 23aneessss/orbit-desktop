@@ -12,6 +12,7 @@ private enum PeopleFilter: String, CaseIterable, Identifiable {
 struct PeopleView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.colorScheme) private var scheme
+    @Environment(\.orbitWidth) private var orbitWidth
     @Query(sort: \Contact.name) private var contacts: [Contact]
     @Query(sort: \Interaction.dateKey, order: .reverse) private var interactions: [Interaction]
     @Binding var requestedContactID: UUID?
@@ -98,7 +99,7 @@ struct PeopleView: View {
                     .overlay { RoundedRectangle(cornerRadius: 10).stroke(OrbitTheme.line(scheme)) }
                     Picker("Filter", selection: $filter) {
                         ForEach(PeopleFilter.allCases) { Text($0.rawValue).tag($0) }
-                    }.pickerStyle(.segmented).frame(width: 310)
+                    }.pickerStyle(.segmented).frame(maxWidth: 310)
                     Spacer()
                 }
 
@@ -115,7 +116,7 @@ struct PeopleView: View {
                     contactsTable
                 }
             }
-            .padding(32).frame(maxWidth: 1160, alignment: .leading).frame(maxWidth: .infinity)
+            .padding(orbitWidth.pagePadding).frame(maxWidth: 1160, alignment: .leading).frame(maxWidth: .infinity)
         }.background(OrbitTheme.canvas(scheme))
     }
 
@@ -123,9 +124,13 @@ struct PeopleView: View {
         VStack(spacing: 0) {
             HStack(spacing: 16) {
                 Text("PERSON").frame(maxWidth: .infinity, alignment: .leading)
-                Text("COMPANY").frame(width: 170, alignment: .leading)
-                Text("LAST CONTACT").frame(width: 130, alignment: .leading)
-                Text("FOLLOW-UP").frame(width: 140, alignment: .leading)
+                if orbitWidth == .regular {
+                    Text("COMPANY").frame(width: 170, alignment: .leading)
+                    Text("LAST CONTACT").frame(width: 130, alignment: .leading)
+                }
+                if orbitWidth != .compact {
+                    Text("FOLLOW-UP").frame(width: 140, alignment: .leading)
+                }
                 Spacer().frame(width: 28)
             }
             .font(.system(size: 9.5, weight: .semibold)).tracking(0.8).foregroundStyle(OrbitTheme.ink3(scheme))
@@ -141,9 +146,13 @@ struct PeopleView: View {
                                 Text(contact.role ?? contact.email ?? "No details yet").font(.system(size: 10.5)).foregroundStyle(OrbitTheme.ink3(scheme)).lineLimit(1)
                             }
                         }.frame(maxWidth: .infinity, alignment: .leading)
-                        Text(contact.company ?? "—").frame(width: 170, alignment: .leading)
-                        Text(relativeDate(contact.lastContactedKey, fallback: "Never")).frame(width: 130, alignment: .leading)
-                        FollowUpBadge(dateKey: contact.nextFollowUpKey).frame(width: 140, alignment: .leading)
+                        if orbitWidth == .regular {
+                            Text(contact.company ?? "—").frame(width: 170, alignment: .leading)
+                            Text(relativeDate(contact.lastContactedKey, fallback: "Never")).frame(width: 130, alignment: .leading)
+                        }
+                        if orbitWidth != .compact {
+                            FollowUpBadge(dateKey: contact.nextFollowUpKey).frame(width: 140, alignment: .leading)
+                        }
                         Button { contact.favorite.toggle(); try? modelContext.save() } label: {
                             Image(systemName: contact.favorite ? "star.fill" : "star").foregroundStyle(contact.favorite ? OrbitTheme.amber : OrbitTheme.ink3(scheme))
                         }.buttonStyle(.plain).frame(width: 28)
@@ -187,6 +196,7 @@ struct PeopleView: View {
 
 private struct PersonDetailView: View {
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.orbitWidth) private var orbitWidth
     @Environment(\.colorScheme) private var scheme
     @Bindable var contact: Contact
     let interactions: [Interaction]
@@ -237,7 +247,7 @@ private struct PersonDetailView: View {
                         Spacer()
                     }.padding(28)
                 }
-                .frame(width: 300).background(OrbitTheme.sunken(scheme).opacity(0.35))
+                .frame(width: orbitWidth.isCompact ? 208 : 300).background(OrbitTheme.sunken(scheme).opacity(0.35))
                 Divider().overlay(OrbitTheme.line(scheme))
 
                 ScrollView {
@@ -331,7 +341,7 @@ private struct ContactFormView: View {
                 fieldRow("Tags", text: $tagsText)
             }
             HStack { Spacer(); Button("Cancel", action: onCancel).keyboardShortcut(.cancelAction); Button(isNew ? "Add person" : "Save") { contact.tags = tagsText.split(separator: ",").map { $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() }.filter { !$0.isEmpty }; onSave(contact) }.buttonStyle(.borderedProminent).tint(OrbitTheme.accent).keyboardShortcut(.defaultAction).disabled(contact.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty) }
-        }.padding(24).frame(width: 480).onAppear { tagsText = contact.tags.joined(separator: ", ") }
+        }.padding(24).frame(minWidth: 300, idealWidth: 480).onAppear { tagsText = contact.tags.joined(separator: ", ") }
     }
 
     private func fieldRow(_ label: String, text: Binding<String>) -> some View {

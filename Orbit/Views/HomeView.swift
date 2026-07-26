@@ -4,6 +4,7 @@ import SwiftUI
 struct HomeView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.colorScheme) private var scheme
+    @Environment(\.orbitWidth) private var orbitWidth
     @Query private var habits: [Habit]
     @Query private var logs: [HabitLog]
     @Query private var ideas: [Idea]
@@ -129,10 +130,10 @@ struct HomeView: View {
                             }
                         }.padding(18).orbitCard()
                     }
-                    .frame(width: 310, alignment: .leading)
+                    .frame(maxWidth: 310, alignment: .leading)
                 }
             }
-            .padding(32)
+            .padding(orbitWidth.pagePadding)
             .frame(maxWidth: 1220, alignment: .leading)
             .frame(maxWidth: .infinity)
         }

@@ -10,6 +10,7 @@ private struct MergeCandidate: Identifiable {
 struct IdeaCanvasView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.colorScheme) private var scheme
+    @Environment(\.orbitWidth) private var orbitWidth
     @Query(sort: \Idea.createdAt) private var ideas: [Idea]
     @Query private var links: [IdeaLink]
     @Query(sort: \IdeaFolder.name) private var folders: [IdeaFolder]
@@ -193,7 +194,7 @@ struct IdeaCanvasView: View {
             Button { addIdea() } label: { Label("New idea", systemImage: "plus") }
                 .buttonStyle(.borderedProminent).tint(OrbitTheme.accent)
         }
-        .padding(.horizontal, 32).frame(height: 96)
+        .padding(.horizontal, orbitWidth.pagePadding).frame(height: orbitWidth.isCompact ? 76 : 96)
     }
 
     private var canvasControls: some View {

@@ -4,6 +4,7 @@ import SwiftUI
 struct HabitsView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.colorScheme) private var scheme
+    @Environment(\.orbitWidth) private var orbitWidth
     @Query(sort: \Habit.createdAt) private var habits: [Habit]
     @Query private var logs: [HabitLog]
 
@@ -54,7 +55,7 @@ struct HabitsView: View {
                     }
                 }
             }
-            .padding(32)
+            .padding(orbitWidth.pagePadding)
             .frame(maxWidth: 1220, alignment: .leading)
             .frame(maxWidth: .infinity)
         }
@@ -435,7 +436,7 @@ private struct HabitEditorSheet: View {
             }
             .padding(20)
         }
-        .frame(width: 500, height: 590)
+        .frame(minWidth: 320, idealWidth: 500, minHeight: 360, idealHeight: 590)
         .onAppear { nameFocused = true }
         .alert("Delete habit?", isPresented: $confirmDelete) {
             Button("Cancel", role: .cancel) {}

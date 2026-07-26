@@ -50,7 +50,7 @@ struct OrbitApp: App {
     var body: some Scene {
         WindowGroup {
             AppShellView()
-                .frame(minWidth: 1040, minHeight: 680)
+                .frame(minWidth: 420, minHeight: 420)
                 .onAppear { OrbitAppIcon.apply() }
         }
         .modelContainer(container)

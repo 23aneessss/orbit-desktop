@@ -4,6 +4,7 @@ import SwiftUI
 struct TasksView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.colorScheme) private var scheme
+    @Environment(\.orbitWidth) private var orbitWidth
     @Query(sort: \OrbitTask.createdAt, order: .reverse) private var tasks: [OrbitTask]
     @Query private var allSteps: [OrbitTaskStep]
     @Query private var allLinks: [StepLink]
@@ -60,7 +61,7 @@ struct TasksView: View {
                 taskSection("Open", tasks.filter { !$0.done })
                 if tasks.contains(where: \.done) { taskSection("Completed", tasks.filter(\.done)) }
             }
-            .padding(32).frame(maxWidth: 1040, alignment: .leading).frame(maxWidth: .infinity)
+            .padding(orbitWidth.pagePadding).frame(maxWidth: 1040, alignment: .leading).frame(maxWidth: .infinity)
         }
         .background(OrbitTheme.canvas(scheme))
     }

@@ -39,6 +39,7 @@ struct AppShellView: View {
     @State private var commandPalettePresented = false
     @State private var requestedIdeaID: UUID?
     @State private var requestedContactID: UUID?
+    @State private var overlaySidebar = false
 
     private var displayName: String {
         settings.first(where: { $0.key == "name" })?.value ?? ""
@@ -51,18 +52,57 @@ struct AppShellView: View {
         }.count
     }
 
+    /// How the menu presents itself at the current window width.
+    private enum SidebarMode { case expanded, rail, hidden }
+
+    private func sidebarMode(for widthClass: OrbitWidthClass) -> SidebarMode {
+        switch widthClass {
+        case .compact: .hidden          // becomes a drawer over the content
+        case .medium: .rail             // icons only, no room for labels
+        case .regular: sidebarCollapsed ? .rail : .expanded
+        }
+    }
+
     var body: some View {
-        HStack(spacing: 0) {
-            sidebar
-                .frame(width: sidebarCollapsed ? 72 : 256)
+        GeometryReader { proxy in
+            let widthClass = OrbitWidthClass(proxy.size.width)
+            let mode = sidebarMode(for: widthClass)
 
-            Divider().overlay(OrbitTheme.line(scheme))
+            ZStack(alignment: .leading) {
+                HStack(spacing: 0) {
+                    if mode != .hidden {
+                        sidebar(mode)
+                            .frame(width: mode == .expanded ? 256 : 72)
+                        Divider().overlay(OrbitTheme.line(scheme))
+                    }
 
-            VStack(spacing: 0) {
-                topbar
-                Divider().overlay(OrbitTheme.line(scheme))
-                content
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    VStack(spacing: 0) {
+                        topbar(widthClass, mode: mode)
+                        Divider().overlay(OrbitTheme.line(scheme))
+                        content
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    }
+                }
+
+                // Below the compact threshold the menu would eat most of the
+                // window, so it slides over the content instead of displacing it.
+                if mode == .hidden, overlaySidebar {
+                    Color.black.opacity(0.32)
+                        .ignoresSafeArea()
+                        .onTapGesture { setOverlay(false) }
+                        .accessibilityLabel("Close menu")
+
+                    sidebar(.expanded)
+                        .frame(width: 244)
+                        .background(OrbitTheme.canvas(scheme))
+                        .overlay(alignment: .trailing) { Divider().overlay(OrbitTheme.line(scheme)) }
+                        .shadow(color: .black.opacity(0.3), radius: 18, x: 5)
+                        .transition(.move(edge: .leading))
+                }
+            }
+            .environment(\.orbitWidth, widthClass)
+            .onChange(of: mode) { _, updated in
+                if updated != .hidden { overlaySidebar = false }
             }
         }
         .background(OrbitTheme.canvas(scheme))
@@ -78,9 +118,15 @@ struct AppShellView: View {
         }
     }
 
-    private var sidebar: some View {
-        VStack(spacing: 0) {
-            if sidebarCollapsed {
+    private func setOverlay(_ shown: Bool) {
+        withAnimation(.easeOut(duration: 0.18)) { overlaySidebar = shown }
+    }
+
+    private func sidebar(_ mode: SidebarMode) -> some View {
+        let rail = mode == .rail
+
+        return VStack(spacing: 0) {
+            if rail {
                 VStack(spacing: 10) {
                     OrbitLogo()
                     sidebarToggle
@@ -91,7 +137,7 @@ struct AppShellView: View {
             } else {
                 HStack(spacing: 12) {
                     OrbitLogo()
-                    Text("Orbit").font(.system(size: 18, weight: .semibold)).transition(.opacity.combined(with: .move(edge: .leading)))
+                    Text("Orbit").font(.system(size: 18, weight: .semibold))
                     Spacer()
                     sidebarToggle
                 }
@@ -100,11 +146,10 @@ struct AppShellView: View {
                 .transition(.opacity)
             }
 
-
-            Button { commandPalettePresented = true } label: {
+            Button { commandPalettePresented = true; setOverlay(false) } label: {
                 HStack(spacing: 11) {
                     Image(systemName: "magnifyingglass")
-                    if !sidebarCollapsed {
+                    if !rail {
                         Text("Search")
                         Spacer()
                         Text("⌘K").font(.system(size: 11, weight: .medium))
@@ -119,10 +164,9 @@ struct AppShellView: View {
                 .overlay { RoundedRectangle(cornerRadius: 10).stroke(OrbitTheme.line(scheme)) }
             }
             .buttonStyle(.plain)
-            .padding(.horizontal, sidebarCollapsed ? 10 : 16)
+            .padding(.horizontal, rail ? 10 : 16)
 
-
-            if !sidebarCollapsed {
+            if !rail {
                 Text("MENU")
                     .font(.system(size: 10, weight: .semibold))
                     .tracking(1.1)
@@ -136,16 +180,13 @@ struct AppShellView: View {
             }
 
             ForEach(OrbitSection.allCases.filter { $0 != .settings }) { section in
-                sidebarItem(section)
+                sidebarItem(section, rail: rail)
             }
 
-            Spacer()
-            sidebarItem(.settings)
+            Spacer(minLength: 8)
+            sidebarItem(.settings, rail: rail)
 
-
-
-
-            if !sidebarCollapsed {
+            if !rail {
                 HStack(spacing: 12) {
                     ProgressRing(progress: habits.isEmpty ? 0 : Double(completedToday) / Double(habits.count))
                     VStack(alignment: .leading, spacing: 3) {
@@ -182,48 +223,77 @@ struct AppShellView: View {
         .accessibilityLabel(sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar")
     }
 
-    private func sidebarItem(_ section: OrbitSection) -> some View {
-        Button { selection = section } label: {
+    private func sidebarItem(_ section: OrbitSection, rail: Bool) -> some View {
+        Button {
+            selection = section
+            setOverlay(false)
+        } label: {
             HStack(spacing: 13) {
                 Image(systemName: section.symbol)
                     .font(.system(size: 15, weight: selection == section ? .semibold : .regular))
                     .frame(width: 20)
-                if !sidebarCollapsed {
+                if !rail {
                     Text(section.rawValue).font(.system(size: 14, weight: .medium))
                     Spacer()
                 }
             }
             .foregroundStyle(selection == section ? OrbitTheme.accent : OrbitTheme.ink2(scheme))
-            .padding(.horizontal, sidebarCollapsed ? 18 : 16)
+            .padding(.horizontal, rail ? 18 : 16)
             .frame(maxWidth: .infinity, minHeight: 42, alignment: .leading)
             .background(selection == section ? OrbitTheme.accentSoft(scheme) : .clear,
                         in: RoundedRectangle(cornerRadius: 10))
         }
         .buttonStyle(.plain)
-        .padding(.horizontal, sidebarCollapsed ? 9 : 16)
+        .padding(.horizontal, rail ? 9 : 16)
         .help(section.rawValue)
     }
 
-    private var topbar: some View {
+    private func topbar(_ widthClass: OrbitWidthClass, mode: SidebarMode) -> some View {
         HStack(spacing: 9) {
-            Text("Orbit").foregroundStyle(OrbitTheme.ink3(scheme))
-            Image(systemName: "chevron.right").font(.system(size: 10, weight: .semibold))
-                .foregroundStyle(OrbitTheme.ink3(scheme))
-            Text(selection.rawValue).fontWeight(.medium)
-            Spacer()
-            Text(Date.now.formatted(.dateTime.weekday(.wide).month(.abbreviated).day()))
-                .foregroundStyle(OrbitTheme.ink3(scheme))
+            if mode == .hidden {
+                Button { setOverlay(!overlaySidebar) } label: {
+                    Image(systemName: "sidebar.leading")
+                        .font(.system(size: 14, weight: .medium))
+                        .frame(width: 26, height: 26)
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(OrbitTheme.ink2(scheme))
+                .help("Show menu")
+                .accessibilityLabel("Show menu")
+            }
+
+            // The breadcrumb prefix and the date are the first things to go —
+            // the section name and the profile button are what actually get used.
+            if widthClass == .regular {
+                Text("Orbit").foregroundStyle(OrbitTheme.ink3(scheme))
+                Image(systemName: "chevron.right").font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(OrbitTheme.ink3(scheme))
+            }
+
+            Text(selection.rawValue).fontWeight(.medium).lineLimit(1)
+
+            Spacer(minLength: 8)
+
+            if widthClass == .regular {
+                Text(Date.now.formatted(.dateTime.weekday(.wide).month(.abbreviated).day()))
+                    .foregroundStyle(OrbitTheme.ink3(scheme)).lineLimit(1)
+            } else if widthClass == .medium {
+                Text(Date.now.formatted(.dateTime.month(.abbreviated).day()))
+                    .foregroundStyle(OrbitTheme.ink3(scheme)).lineLimit(1)
+            }
+
             Button { selection = .settings } label: {
-                Text(displayName.prefix(1).uppercased().isEmpty ? "A" : displayName.prefix(1).uppercased())
-                    .font(.system(size: 12, weight: .semibold))
-                    .frame(width: 34, height: 34)
+                let initial = displayName.prefix(1).uppercased()
+                Text(initial.isEmpty ? "A" : initial)
+                    .font(.system(size: widthClass.isCompact ? 11 : 12, weight: .semibold))
+                    .frame(width: widthClass.isCompact ? 28 : 34, height: widthClass.isCompact ? 28 : 34)
                     .background(Color(hex: "C7F4E9"), in: Circle())
                     .foregroundStyle(Color(hex: "166B5B"))
             }
             .buttonStyle(.plain)
         }
         .font(.system(size: 13))
-        .padding(.horizontal, 28)
+        .padding(.horizontal, widthClass.isCompact ? 14 : 28)
         .frame(height: 56)
         .background(OrbitTheme.canvas(scheme))
     }
@@ -341,7 +411,7 @@ private struct CommandPaletteView: View {
                 }.padding(10)
             }
         }
-        .frame(width: 560, height: 420)
+        .frame(minWidth: 300, idealWidth: 540, minHeight: 260, idealHeight: 420)
     }
 
     private func paletteHeader(_ title: String) -> some View {
