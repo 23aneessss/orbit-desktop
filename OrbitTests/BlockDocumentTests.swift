@@ -311,3 +311,40 @@ final class PageIconTests: XCTestCase {
         if let firstWholeWord, let firstPartial { XCTAssertLessThan(firstWholeWord, firstPartial) }
     }
 }
+
+// MARK: - Responsive layout
+
+final class OrbitWidthClassTests: XCTestCase {
+    func testBreakpointsMapToTheIntendedLayouts() {
+        XCTAssertEqual(OrbitWidthClass(420), .compact)   // the new window minimum
+        XCTAssertEqual(OrbitWidthClass(639), .compact)
+        XCTAssertEqual(OrbitWidthClass(640), .medium)
+        XCTAssertEqual(OrbitWidthClass(959), .medium)
+        XCTAssertEqual(OrbitWidthClass(960), .regular)
+        XCTAssertEqual(OrbitWidthClass(1440), .regular)
+    }
+
+    func testPaddingShrinksMonotonicallyAsTheWindowNarrows() {
+        XCTAssertLessThan(OrbitWidthClass.compact.pagePadding, OrbitWidthClass.medium.pagePadding)
+        XCTAssertLessThan(OrbitWidthClass.medium.pagePadding, OrbitWidthClass.regular.pagePadding)
+        XCTAssertLessThan(OrbitWidthClass.compact.readerPadding, OrbitWidthClass.regular.readerPadding)
+        XCTAssertLessThan(OrbitWidthClass.compact.gutterWidth, OrbitWidthClass.regular.gutterWidth)
+    }
+
+    func testTheNarrowestSupportedWindowStillLeavesUsableContentWidth() {
+        // 420pt minus both page paddings has to leave room for real text.
+        let usable = 420 - OrbitWidthClass.compact.pagePadding * 2
+        XCTAssertGreaterThan(usable, 340)
+
+        // The reader also gives up its gutter, so a block keeps a sane measure.
+        let reader = 420 - OrbitWidthClass.compact.readerPadding * 2 - OrbitWidthClass.compact.gutterWidth
+        XCTAssertGreaterThan(reader, 300)
+    }
+
+    func testClassesOrderFromNarrowToWide() {
+        XCTAssertTrue(OrbitWidthClass.compact < .medium)
+        XCTAssertTrue(OrbitWidthClass.medium < .regular)
+        XCTAssertTrue(OrbitWidthClass.compact.isCompact)
+        XCTAssertFalse(OrbitWidthClass.medium.isCompact)
+    }
+}
