@@ -262,12 +262,43 @@ final class PageIconTests: XCTestCase {
         XCTAssertNil(PageIcon.read(id, from: [AppSetting(key: PageIcon.key(for: id), value: "")]))
     }
 
-    func testCatalogSearchMatchesKeywordsAndDeduplicates() {
-        XCTAssertTrue(EmojiCatalog.search("rocket").contains { $0.emoji == "🚀" })
-        XCTAssertTrue(EmojiCatalog.search("goal").contains { $0.emoji == "🎯" })
-        XCTAssertTrue(EmojiCatalog.search("zzzznope").isEmpty)
+    func testCatalogCoversTheWholeUnicodeEmojiSet() {
+        // Generated from Unicode.Scalar.Properties, so this is a floor rather
+        // than an exact figure — it rises as Apple ships new Unicode revisions.
+        XCTAssertGreaterThan(EmojiCatalog.all.count, 1_400)
 
-        let listMatches = EmojiCatalog.search("list")
-        XCTAssertEqual(listMatches.count, Set(listMatches.map(\.emoji)).count)
+        let names = Set(EmojiCatalog.groups.map(\.category))
+        XCTAssertTrue(names.contains(.smileys))
+        XCTAssertTrue(names.contains(.nature))
+        XCTAssertTrue(names.contains(.flags))
+        XCTAssertGreaterThan(EmojiCatalog.groups.first { $0.category == .flags }?.entries.count ?? 0, 200)
+    }
+
+    func testEveryEntryIsASingleRenderableGrapheme() {
+        for entry in EmojiCatalog.all {
+            XCTAssertEqual(entry.emoji.count, 1, "\(entry.emoji) is not one grapheme cluster")
+            XCTAssertFalse(entry.keywords.isEmpty, "\(entry.emoji) has no search keywords")
+        }
+    }
+
+    func testSearchFindsByUnicodeNameAndByAlias() {
+        // Unicode name.
+        XCTAssertTrue(EmojiCatalog.search("rocket").contains { $0.emoji == "🚀" })
+        XCTAssertTrue(EmojiCatalog.search("octopus").contains { $0.emoji == "🐙" })
+        // Alias — "smile" is nowhere in GRINNING FACE.
+        XCTAssertTrue(EmojiCatalog.search("smile").contains { $0.emoji == "😀" })
+        XCTAssertTrue(EmojiCatalog.search("done").contains { $0.emoji == "✅" })
+        // Country name, not the ISO code.
+        XCTAssertTrue(EmojiCatalog.search("france").contains { $0.emoji == "🇫🇷" })
+        XCTAssertTrue(EmojiCatalog.search("zzzznope").isEmpty)
+    }
+
+    func testSearchDeduplicatesAndRanksWholeWordsFirst() {
+        let matches = EmojiCatalog.search("cat")
+        XCTAssertEqual(matches.count, Set(matches.map(\.emoji)).count)
+        // "cat" as a whole word must outrank "caterpillar"/"delicatessen".
+        let firstWholeWord = matches.firstIndex { $0.keywords.split(separator: " ").contains("cat") }
+        let firstPartial = matches.firstIndex { !$0.keywords.split(separator: " ").contains("cat") }
+        if let firstWholeWord, let firstPartial { XCTAssertLessThan(firstWholeWord, firstPartial) }
     }
 }
