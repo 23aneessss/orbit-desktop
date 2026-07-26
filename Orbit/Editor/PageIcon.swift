@@ -111,7 +111,8 @@ enum EmojiCatalog {
             buckets[category, default: []].append(Entry(emoji: emoji, keywords: keywords))
         }
 
-        buckets[.flags] = flagEntries()
+        // Append, never assign — the ZWJ flags above land in this same bucket.
+        buckets[.flags, default: []].append(contentsOf: flagEntries())
         buckets[.suggested] = suggested.map { emoji in
             Entry(emoji: emoji, keywords: (aliases[emoji] ?? "") + " " + (unicodeName(of: emoji) ?? ""))
         }

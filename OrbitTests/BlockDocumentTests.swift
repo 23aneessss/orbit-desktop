@@ -277,8 +277,10 @@ final class PageIconTests: XCTestCase {
     func testComposedZWJSequencesAreIncludedSinceScalarScanningMissesThem() {
         XCTAssertTrue(EmojiCatalog.search("developer").contains { $0.emoji == "\u{1F9D1}\u{200D}\u{1F4BB}" })
         XCTAssertTrue(EmojiCatalog.search("astronaut").contains { $0.emoji == "\u{1F9D1}\u{200D}\u{1F680}" })
-        XCTAssertTrue(EmojiCatalog.search("family").contains { $0.emoji.contains("\u{200D}") })
-        XCTAssertTrue(EmojiCatalog.search("pride").contains { $0.emoji.contains("\u{1F308}") })
+        // A composed emoji is a single grapheme, so `String.contains` cannot see
+        // its parts — the scalars have to be inspected directly.
+        XCTAssertTrue(EmojiCatalog.search("family").contains { $0.emoji.unicodeScalars.contains("\u{200D}") })
+        XCTAssertTrue(EmojiCatalog.search("pride").contains { $0.emoji.unicodeScalars.contains("\u{1F308}") })
     }
 
     func testEveryEntryIsASingleRenderableGrapheme() {
