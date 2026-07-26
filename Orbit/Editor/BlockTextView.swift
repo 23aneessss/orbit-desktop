@@ -95,6 +95,8 @@ struct BlockIntents {
     /// Caret left the top or bottom edge.
     var moveFocus: (_ down: Bool, _ offset: Int) -> Void = { _, _ in }
     var escape: () -> Void = {}
+    /// Multi-line paste — the editor turns it into blocks at the given offset.
+    var paste: (_ markdown: String, _ caret: Int) -> Void = { _, _ in }
     /// Slash-menu query, or nil when the menu should close.
     var slashQuery: (String?) -> Void = { _ in }
     /// Arrow / Return while the slash menu owns the keyboard.
@@ -170,6 +172,30 @@ final class BlockNSTextView: NSTextView {
             length: (selected as NSString).length
         ))
     }
+
+    /// A block renders one logical line, so a multi-line paste has to become
+    /// several blocks. Left to AppKit it lands as one block full of newlines,
+    /// which draws clipped over the row below and serializes back out as a
+    /// heading that swallowed the list underneath it.
+    override func paste(_ sender: Any?) {
+        guard let raw = NSPasteboard.general.string(forType: .string),
+              raw.contains("\n") else {
+            super.paste(sender)
+            return
+        }
+
+        // Replacing the selection first keeps the caret offset we hand over
+        // meaningful, and lets the normal undo grouping record the deletion.
+        let selection = selectedRange()
+        if selection.length > 0, shouldChangeText(in: selection, replacementString: "") {
+            replaceCharacters(in: selection, with: "")
+            didChangeText()
+        }
+
+        intents.paste(raw, selectedRange().location)
+    }
+
+    override func pasteAsPlainText(_ sender: Any?) { paste(sender) }
 
     override func doCommand(by selector: Selector) {
         // While the slash menu is up it owns the arrows and Return.

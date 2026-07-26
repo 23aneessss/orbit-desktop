@@ -348,3 +348,88 @@ final class OrbitWidthClassTests: XCTestCase {
         XCTAssertFalse(OrbitWidthClass.medium.isCompact)
     }
 }
+
+/// Pasting markdown has to produce real blocks. Landing it in a single block
+/// was what made a pasted note render clipped and serialize back out as a
+/// heading that had swallowed the list under it.
+final class BlockPasteTests: XCTestCase {
+    private let clipboard = """
+        ## Roadmap
+        - ship the editor
+        - [ ] write the tests
+        """
+
+    func testPasteIntoEmptyBlockBecomesOneBlockPerLine() throws {
+        let document = [Block()]
+        let result = try XCTUnwrap(BlockDocument.paste(clipboard, into: document, at: 0, caret: 0))
+
+        XCTAssertEqual(result.blocks.map(\.kind), [.heading2, .bulleted, .todo])
+        XCTAssertEqual(result.blocks.map(\.text), ["Roadmap", "ship the editor", "write the tests"])
+        XCTAssertEqual(BlockDocument.serialize(result.blocks), clipboard)
+    }
+
+    func testPasteKeepsTheFocusedBlockAlive() throws {
+        let document = [Block()]
+        let result = try XCTUnwrap(BlockDocument.paste(clipboard, into: document, at: 0, caret: 0))
+
+        // Reusing the id keeps the caret's text view from being torn down.
+        XCTAssertEqual(result.blocks.first?.id, document[0].id)
+        XCTAssertEqual(result.caretID, result.blocks.last?.id)
+        XCTAssertEqual(result.caretOffset, "write the tests".count)
+    }
+
+    func testPlainProseMergesIntoTheBlockTheCaretSitsIn() throws {
+        let document = [Block(kind: .bulleted, text: "first", indent: 1)]
+        let result = try XCTUnwrap(
+            BlockDocument.paste("one\ntwo", into: document, at: 0, caret: 5)
+        )
+
+        XCTAssertEqual(result.blocks.map(\.kind), [.bulleted, .paragraph])
+        XCTAssertEqual(result.blocks.map(\.text), ["firstone", "two"])
+        XCTAssertEqual(result.blocks[0].indent, 1, "the bullet keeps its nesting")
+    }
+
+    func testPastedHeadingIsNotFlattenedIntoTheSurroundingParagraph() throws {
+        let document = [Block(kind: .paragraph, text: "intro")]
+        let result = try XCTUnwrap(
+            BlockDocument.paste("## Title\nbody", into: document, at: 0, caret: 5)
+        )
+
+        XCTAssertEqual(result.blocks.map(\.kind), [.paragraph, .heading2, .paragraph])
+        XCTAssertEqual(result.blocks.map(\.text), ["intro", "Title", "body"])
+    }
+
+    func testTextRightOfTheCaretTrailsThePaste() throws {
+        let document = [Block(kind: .paragraph, text: "AB")]
+        let result = try XCTUnwrap(
+            BlockDocument.paste("one\ntwo", into: document, at: 0, caret: 1)
+        )
+
+        XCTAssertEqual(result.blocks.map(\.text), ["Aone", "two", "B"])
+        // The caret lands after the paste, not after the trailing remainder.
+        XCTAssertEqual(result.caretID, result.blocks[1].id)
+        XCTAssertEqual(result.caretOffset, 3)
+    }
+
+    func testCarriageReturnsFromOtherPlatformsAreNormalised() throws {
+        let result = try XCTUnwrap(
+            BlockDocument.paste("- a\r\n- b", into: [Block()], at: 0, caret: 0)
+        )
+
+        XCTAssertEqual(result.blocks.map(\.kind), [.bulleted, .bulleted])
+        XCTAssertEqual(result.blocks.map(\.text), ["a", "b"])
+    }
+
+    func testPasteIntoAnInvalidIndexIsRefused() {
+        XCTAssertNil(BlockDocument.paste("a\nb", into: [Block()], at: 3, caret: 0))
+    }
+
+    /// Blocks that were pasted but never edited still replay their source line,
+    /// so a paste round-trips byte-for-byte like a freshly opened note.
+    func testPastedBlocksRoundTripVerbatim() throws {
+        let awkward = "###  double spaced\n   -   loose bullet\n\n> quote"
+        let result = try XCTUnwrap(BlockDocument.paste(awkward, into: [Block()], at: 0, caret: 0))
+
+        XCTAssertEqual(BlockDocument.serialize(result.blocks), awkward)
+    }
+}

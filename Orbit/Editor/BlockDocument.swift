@@ -374,6 +374,78 @@ enum BlockDocument {
         guard let first = marker.first else { return false }
         return trimmed.hasPrefix(marker) && trimmed.allSatisfy { $0 == first }
     }
+
+    // MARK: - Paste
+
+    /// Splices pasted markdown into a document as real blocks.
+    ///
+    /// A block lays out exactly one logical line, so letting a multi-line paste
+    /// land in a single block renders clipped and re-serializes as a heading
+    /// that swallowed a list. Pasting has to be a structural edit.
+    ///
+    /// Returns the rewritten document and where the caret should land, or nil
+    /// if there was nothing to paste.
+    static func paste(
+        _ markdown: String,
+        into blocks: [Block],
+        at index: Int,
+        caret: Int
+    ) -> (blocks: [Block], caretID: UUID, caretOffset: Int)? {
+        guard blocks.indices.contains(index) else { return nil }
+
+        // Pasting out of a browser or Windows brings CRLF along with it.
+        let normalized = markdown
+            .replacingOccurrences(of: "\r\n", with: "\n")
+            .replacingOccurrences(of: "\r", with: "\n")
+
+        var incoming = parse(normalized)
+        guard !incoming.isEmpty else { return nil }
+
+        let target = blocks[index]
+        let characters = Array(target.text)
+        let cut = min(max(caret, 0), characters.count)
+        let head = String(characters[..<cut])
+        let tail = String(characters[cut...])
+
+        if !head.isEmpty {
+            if incoming[0].kind == .paragraph {
+                // Plain prose flows into the text already left of the caret and
+                // keeps that block's own kind, so pasting a sentence at the end
+                // of a bullet extends the bullet.
+                incoming[0].kind = target.kind
+                incoming[0].checked = target.checked
+                incoming[0].indent = target.indent
+                incoming[0].text = head + incoming[0].text
+                incoming[0].edited()
+            } else {
+                // A pasted heading or list item keeps its own kind instead of
+                // being flattened into the paragraph it landed in.
+                var lead = target
+                lead.text = head
+                lead.edited()
+                incoming.insert(lead, at: 0)
+            }
+        }
+
+        if !tail.isEmpty {
+            var trail = target
+            trail.id = UUID()
+            trail.text = tail
+            trail.edited()
+            incoming.append(trail)
+        }
+
+        // Reusing the focused block's id keeps its text view alive across the
+        // splice instead of tearing it down mid-paste.
+        incoming[0].id = target.id
+
+        let caretIndex = max(0, tail.isEmpty ? incoming.count - 1 : incoming.count - 2)
+        let landing = incoming[caretIndex]
+
+        var result = blocks
+        result.replaceSubrange(index...index, with: incoming)
+        return (result, landing.id, landing.text.count)
+    }
 }
 
 // MARK: - Markdown shortcuts typed inside a block

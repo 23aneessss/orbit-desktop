@@ -1,5 +1,4 @@
 import SwiftUI
-import UniformTypeIdentifiers
 
 /// A Notion-style block editor over a plain markdown string.
 ///
@@ -23,9 +22,20 @@ struct BlockEditorView: View {
     @State private var blocks: [Block] = []
     @State private var heights: [UUID: CGFloat] = [:]
     @State private var hoveredID: UUID?
-    @State private var draggingID: UUID?
-    @State private var dropTargetID: UUID?
     @State private var selectedDividerID: UUID?
+
+    /// Row geometry, used to turn a drag position into an insertion index.
+    @State private var rowFrames: [UUID: CGRect] = [:]
+    @State private var drag: DragState?
+    @State private var menuBlockID: UUID?
+
+    private struct DragState {
+        let id: UUID
+        /// Where the dragged block would land, as an index into `blocks`.
+        var target: Int
+    }
+
+    private static let space = "orbit.blocks"
 
     @State private var slashTarget: UUID?
     @State private var slashQuery: String = ""
@@ -48,6 +58,9 @@ struct BlockEditorView: View {
 
             trailingClickCatcher
         }
+        .coordinateSpace(name: Self.space)
+        .onPreferenceChange(RowFramePreference.self) { rowFrames = $0 }
+        .overlay(alignment: .topLeading) { insertionLine }
         .overlay(alignment: .topLeading) { slashMenuOverlay }
         .environmentObject(focus)
         .onAppear(perform: loadIfNeeded)
@@ -62,11 +75,11 @@ struct BlockEditorView: View {
 
     @ViewBuilder
     private func row(for block: Block, at index: Int) -> some View {
-        let isHovered = hoveredID == block.id
         let isActive = focus.activeID == block.id
+        let showsGutter = hoveredID == block.id || drag?.id == block.id || menuBlockID == block.id
 
         HStack(alignment: .top, spacing: 0) {
-            gutter(for: block, visible: isHovered || draggingID == block.id)
+            gutter(for: block, at: index, visible: showsGutter)
 
             HStack(alignment: .top, spacing: 8) {
                 marker(for: block)
@@ -77,68 +90,112 @@ struct BlockEditorView: View {
         }
         .padding(.top, BlockTypography.spacingAbove(for: block.kind, isFirst: index == 0))
         .padding(.bottom, BlockTypography.spacingBelow(for: block.kind))
-        .background(alignment: .top) { dropIndicator(for: block) }
+        .background {
+            GeometryReader { proxy in
+                Color.clear.preference(
+                    key: RowFramePreference.self,
+                    value: [block.id: proxy.frame(in: .named(Self.space))]
+                )
+            }
+        }
         .contentShape(Rectangle())
         .onHover { hovering in
             if hovering { hoveredID = block.id } else if hoveredID == block.id { hoveredID = nil }
         }
-        .opacity(draggingID == block.id ? 0.35 : 1)
-        .dropDestination(for: String.self) { items, _ in
-            defer { dropTargetID = nil; draggingID = nil }
-            guard let raw = items.first, let sourceID = UUID(uuidString: raw) else { return false }
-            return move(sourceID, above: block.id)
-        } isTargeted: { targeted in
-            dropTargetID = targeted ? block.id : (dropTargetID == block.id ? nil : dropTargetID)
-        }
+        .opacity(drag?.id == block.id ? 0.4 : 1)
     }
 
+    /// The blue rule showing where a dragged block will land.
     @ViewBuilder
-    private func dropIndicator(for block: Block) -> some View {
-        if dropTargetID == block.id, draggingID != block.id {
+    private var insertionLine: some View {
+        if let drag, let y = insertionY(for: drag.target) {
             Rectangle()
                 .fill(OrbitTheme.accent)
                 .frame(height: 2)
                 .padding(.leading, orbitWidth.gutterWidth)
+                .offset(y: y - 1)
+                .allowsHitTesting(false)
         }
+    }
+
+    private func insertionY(for index: Int) -> CGFloat? {
+        if blocks.indices.contains(index) { return rowFrames[blocks[index].id]?.minY }
+        return blocks.last.flatMap { rowFrames[$0.id]?.maxY }
+    }
+
+    /// Which slot a drag sitting at `y` would drop into. Comparing against each
+    /// row's midpoint is what makes the target flip as the cursor crosses the
+    /// middle of a row rather than its edge.
+    private func insertionIndex(for y: CGFloat) -> Int {
+        for (index, block) in blocks.enumerated() {
+            guard let frame = rowFrames[block.id] else { continue }
+            if y < frame.midY { return index }
+        }
+        return blocks.count
     }
 
     // MARK: gutter (plus and drag handle)
 
     @ViewBuilder
-    private func gutter(for block: Block, visible: Bool) -> some View {
+    private func gutter(for block: Block, at index: Int, visible: Bool) -> some View {
         HStack(spacing: 1) {
             Button { insertBlock(below: block.id) } label: {
                 Image(systemName: "plus")
                     .font(.system(size: 12, weight: .medium))
                     .frame(width: 20, height: 22)
+                    .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .foregroundStyle(OrbitTheme.ink3(scheme))
             .help("Click to add a block below")
 
-            Menu {
-                blockMenu(for: block)
-            } label: {
-                Image(systemName: "line.3.horizontal")
-                    .font(.system(size: 11, weight: .medium))
-                    .frame(width: 18, height: 22)
-                    .contentShape(Rectangle())
-            }
-            .menuStyle(.borderlessButton)
-            .menuIndicator(.hidden)
-            .fixedSize()
-            .foregroundStyle(OrbitTheme.ink3(scheme))
-            .help("Drag to move, or click for actions")
-            .onDrag {
-                draggingID = block.id
-                return NSItemProvider(object: block.id.uuidString as NSString)
-            }
+            handle(for: block, at: index)
         }
         .opacity(visible ? 1 : 0)
+        // An opacity-0 view still hit-tests in SwiftUI, so without this the
+        // invisible handle swallows clicks in the margin of every row.
+        .allowsHitTesting(visible)
         .animation(.easeOut(duration: 0.1), value: visible)
         .frame(width: orbitWidth.gutterWidth, alignment: .trailing)
         .padding(.trailing, orbitWidth.isCompact ? 2 : 6)
         .padding(.top, gutterTopInset(for: block.kind))
+    }
+
+    /// Drag to reorder, click for the block menu.
+    ///
+    /// This used to be a `Menu` with `.onDrag` attached to its label, which
+    /// never worked: `Menu` consumes the mouse-down to open itself, so the drag
+    /// could not start. Owning both gestures directly is what makes the handle
+    /// behave like Notion's.
+    @ViewBuilder
+    private func handle(for block: Block, at index: Int) -> some View {
+        Image(systemName: "line.3.horizontal")
+            .font(.system(size: 11, weight: .medium))
+            .frame(width: 18, height: 22)
+            .contentShape(Rectangle())
+            .foregroundStyle(OrbitTheme.ink3(scheme))
+            .help("Drag to move, or click for actions")
+            .onTapGesture { menuBlockID = block.id }
+            .gesture(
+                DragGesture(minimumDistance: 4, coordinateSpace: .named(Self.space))
+                    .onChanged { value in
+                        if drag?.id != block.id { drag = DragState(id: block.id, target: index) }
+                        drag?.target = insertionIndex(for: value.location.y)
+                    }
+                    .onEnded { _ in
+                        if let state = drag { moveBlock(state.id, to: state.target) }
+                        drag = nil
+                    }
+            )
+            .popover(
+                isPresented: Binding(
+                    get: { menuBlockID == block.id },
+                    set: { if !$0, menuBlockID == block.id { menuBlockID = nil } }
+                ),
+                arrowEdge: .leading
+            ) {
+                blockMenu(for: block)
+            }
     }
 
     private func gutterTopInset(for kind: BlockKind) -> CGFloat {
@@ -151,24 +208,62 @@ struct BlockEditorView: View {
         }
     }
 
+    /// The handle's click menu. A panel rather than a native `Menu`, because the
+    /// handle needs to own its own gestures in order to drag.
     @ViewBuilder
     private func blockMenu(for block: Block) -> some View {
-        Button("Delete", systemImage: "trash", role: .destructive) { delete(block.id) }
-        Button("Duplicate", systemImage: "plus.square.on.square") { duplicate(block.id) }
-        Divider()
-        Menu("Turn into") {
+        VStack(alignment: .leading, spacing: 1) {
+            menuRow("Delete", "trash", tint: OrbitTheme.rose) { delete(block.id) }
+            menuRow("Duplicate", "plus.square.on.square") { duplicate(block.id) }
+
+            if block.kind.isList || block.kind == .paragraph || block.kind == .quote {
+                menuRow("Indent", "increase.indent") { indent(block.id, deeper: true) }
+                    .disabled(block.indent >= BlockDocument.maxIndent)
+                menuRow("Outdent", "decrease.indent") { indent(block.id, deeper: false) }
+                    .disabled(block.indent == 0)
+            }
+
+            Text("TURN INTO")
+                .font(.system(size: 9.5, weight: .semibold))
+                .tracking(0.9)
+                .foregroundStyle(OrbitTheme.ink3(scheme))
+                .padding(.horizontal, 8)
+                .padding(.top, 9)
+                .padding(.bottom, 3)
+
             ForEach(BlockKind.convertible, id: \.self) { kind in
-                Button(kind.title, systemImage: kind.symbol) { setKind(kind, for: block.id) }
+                menuRow(kind.title, kind.symbol) { setKind(kind, for: block.id) }
                     .disabled(kind == block.kind)
             }
         }
-        if block.kind.isList || block.kind == .paragraph {
-            Divider()
-            Button("Indent", systemImage: "increase.indent") { indent(block.id, deeper: true) }
-                .disabled(block.indent >= BlockDocument.maxIndent)
-            Button("Outdent", systemImage: "decrease.indent") { indent(block.id, deeper: false) }
-                .disabled(block.indent == 0)
+        .padding(6)
+        .frame(width: 208)
+    }
+
+    @ViewBuilder
+    private func menuRow(
+        _ title: String,
+        _ symbol: String,
+        tint: Color? = nil,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button {
+            menuBlockID = nil
+            action()
+        } label: {
+            HStack(spacing: 9) {
+                Image(systemName: symbol)
+                    .font(.system(size: 12))
+                    .frame(width: 16)
+                Text(title).font(.system(size: 12.5))
+                Spacer(minLength: 0)
+            }
+            .foregroundStyle(tint ?? OrbitTheme.ink(scheme))
+            .padding(.horizontal, 8)
+            .padding(.vertical, 5)
+            .contentShape(Rectangle())
         }
+        .buttonStyle(.plain)
     }
 
     // MARK: block leading markers
@@ -596,6 +691,16 @@ struct BlockEditorView: View {
             focus.focus(blocks[index].id, offset: junction)
         }
 
+        intents.paste = { markdown, caret in
+            guard let index = blocks.firstIndex(where: { $0.id == id }),
+                  let spliced = BlockDocument.paste(markdown, into: blocks, at: index, caret: caret)
+            else { return }
+            blocks = spliced.blocks
+            closeSlash()
+            commit()
+            focus.focus(spliced.caretID, offset: spliced.caretOffset)
+        }
+
         intents.indent = { deeper in indent(id, deeper: deeper) }
 
         intents.moveFocus = { down, _ in
@@ -693,14 +798,16 @@ struct BlockEditorView: View {
         if blocks.indices.contains(neighbour) { focus.focus(blocks[neighbour].id) }
     }
 
-    private func move(_ sourceID: UUID, above targetID: UUID) -> Bool {
-        guard sourceID != targetID,
-              let from = blocks.firstIndex(where: { $0.id == sourceID }),
-              let to = blocks.firstIndex(where: { $0.id == targetID }) else { return false }
-        let block = blocks.remove(at: from)
-        blocks.insert(block, at: min(to, blocks.count))
+    /// `destination` is a slot between rows, not a row index — dropping just
+    /// below where the block already sits is a no-op. `move(fromOffsets:)`
+    /// handles the shift that made the old remove-then-insert land one row
+    /// short whenever a block moved downward.
+    private func moveBlock(_ id: UUID, to destination: Int) {
+        guard let from = blocks.firstIndex(where: { $0.id == id }),
+              destination != from, destination != from + 1,
+              (0...blocks.count).contains(destination) else { return }
+        blocks.move(fromOffsets: IndexSet(integer: from), toOffset: destination)
         commit()
-        return true
     }
 
     // MARK: - Load / commit
@@ -739,6 +846,18 @@ struct BlockEditorView: View {
             result[block.id] = counters[block.indent]
         }
         return result
+    }
+}
+
+// MARK: - Row geometry
+
+/// Every row reports its frame so a drag can be resolved to an insertion slot
+/// without guessing from accumulated heights.
+private struct RowFramePreference: PreferenceKey {
+    static let defaultValue: [UUID: CGRect] = [:]
+
+    static func reduce(value: inout [UUID: CGRect], nextValue: () -> [UUID: CGRect]) {
+        value.merge(nextValue()) { $1 }
     }
 }
 
