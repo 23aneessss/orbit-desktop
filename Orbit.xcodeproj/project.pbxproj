@@ -16,6 +16,7 @@
 		2B4A710673B3F7E20419E08F /* TasksView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 46E8F8129B179906DA04E4B1 /* TasksView.swift */; };
 		30CB47074901942DD762E6DD /* ExportService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E423F1AAC47A87A71239D10 /* ExportService.swift */; };
 		33335E4F882F977DFA66C647 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 20936134E6681D18358932B7 /* Assets.xcassets */; };
+		45B474D5C88C9C629F52C2BE /* BlockDocumentTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 78AE3CAEB105490C50CE892A /* BlockDocumentTests.swift */; };
 		46F48D553FD3ABE560B624F5 /* OrbitTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66D0C8FB4C74F5AC31C6D25F /* OrbitTheme.swift */; };
 		567604D291F59AED5CA123E8 /* TaskCompletionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 528B3CA5A15B87580BF57635 /* TaskCompletionService.swift */; };
 		7C8B5DFF0911F41E6BF9FA4D /* PeopleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BBF9172C28578B7EBBFC4A3 /* PeopleView.swift */; };
@@ -56,6 +57,7 @@
 		528B3CA5A15B87580BF57635 /* TaskCompletionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskCompletionService.swift; sourceTree = "<group>"; };
 		5DFA77B4FD4DF15BC26FEA45 /* OrbitApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrbitApp.swift; sourceTree = "<group>"; };
 		66D0C8FB4C74F5AC31C6D25F /* OrbitTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrbitTheme.swift; sourceTree = "<group>"; };
+		78AE3CAEB105490C50CE892A /* BlockDocumentTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlockDocumentTests.swift; sourceTree = "<group>"; };
 		876A4155C011E08FEBBD1DE7 /* OrbitTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = OrbitTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		88BEE77400DF7013C7622B39 /* AppShellView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppShellView.swift; sourceTree = "<group>"; };
 		93E43D9E19F5EF7D480B0771 /* Orbit.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Orbit.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -117,6 +119,7 @@
 		AF6357FC3CFD2962A4B84D7C /* OrbitTests */ = {
 			isa = PBXGroup;
 			children = (
+				78AE3CAEB105490C50CE892A /* BlockDocumentTests.swift */,
 				E4EE5D477AB5624DD9F40103 /* ImportServiceTests.swift */,
 				02F7E45F3FFC1304FBF4D383 /* TaskCompletionServiceTests.swift */,
 			);
@@ -298,6 +301,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				45B474D5C88C9C629F52C2BE /* BlockDocumentTests.swift in Sources */,
 				1422A0758899739CFAF25423 /* ImportServiceTests.swift in Sources */,
 				C84CD846CA563A5CF677B913 /* TaskCompletionServiceTests.swift in Sources */,
 			);
