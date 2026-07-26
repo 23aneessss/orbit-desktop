@@ -13,6 +13,7 @@ struct BlockEditorView: View {
     /// to something that exists in the Ideas tree rather than a dangling id.
     var createPage: (() -> UUID?)?
     var pageTitle: ((UUID) -> String?)?
+    var pageIcon: ((UUID) -> String?)?
     var openPage: ((UUID) -> Void)?
 
     @Environment(\.colorScheme) private var scheme
@@ -266,9 +267,13 @@ struct BlockEditorView: View {
             if let pageID = block.pageID { openPage?(pageID) }
         } label: {
             HStack(spacing: 9) {
-                Image(systemName: "doc.text")
-                    .font(.system(size: 14))
-                    .foregroundStyle(OrbitTheme.ink2(scheme))
+                if let icon = block.pageID.flatMap({ pageIcon?($0) }) {
+                    Text(icon).font(.system(size: 15))
+                } else {
+                    Image(systemName: "doc.text")
+                        .font(.system(size: 14))
+                        .foregroundStyle(OrbitTheme.ink2(scheme))
+                }
                 Text(title.isEmpty ? "Untitled page" : title)
                     .font(.system(size: 15.5, weight: .medium))
                     .foregroundStyle(OrbitTheme.ink(scheme))

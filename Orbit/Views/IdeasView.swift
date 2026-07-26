@@ -6,6 +6,7 @@ struct IdeasView: View {
     @Environment(\.colorScheme) private var scheme
     @Query(sort: \Idea.updatedAt, order: .reverse) private var ideas: [Idea]
     @Query(sort: \IdeaFolder.name) private var folders: [IdeaFolder]
+    @Query private var settings: [AppSetting]
     @Binding var requestedIdeaID: UUID?
 
     @State private var query = ""
@@ -252,6 +253,7 @@ struct IdeasView: View {
                             childCount: self.ideas.count { $0.parentID == idea.id },
                             parentTitle: self.ideas.first { $0.id == idea.parentID }?.title,
                             folders: folders,
+                            icon: PageIcon.read(idea.id, from: settings),
                             open: { selectedIdeaID = idea.id },
                             delete: { delete(idea) },
                             moveToFolder: { moveIdea(idea.id, to: $0) }
@@ -347,6 +349,7 @@ private struct IdeaBrowserCard: View {
     let childCount: Int
     let parentTitle: String?
     let folders: [IdeaFolder]
+    let icon: String?
     let open: () -> Void
     let delete: () -> Void
     let moveToFolder: (UUID?) -> Void
@@ -356,6 +359,7 @@ private struct IdeaBrowserCard: View {
             VStack(alignment: .leading, spacing: 11) {
                 HStack(alignment: .top) {
                     if idea.pinned { Image(systemName: "pin.fill").font(.system(size: 10)).foregroundStyle(OrbitTheme.accent) }
+                    if let icon { Text(icon).font(.system(size: 14)) }
                     Text(idea.title.isEmpty ? "Untitled" : idea.title)
                         .font(.system(size: 14, weight: .semibold)).foregroundStyle(OrbitTheme.ink(scheme)).lineLimit(2)
                     Spacer()
@@ -415,6 +419,7 @@ struct IdeaEditorView: View {
     @Environment(\.colorScheme) private var scheme
     @Query(sort: \Idea.updatedAt, order: .reverse) private var allIdeas: [Idea]
     @Query private var allLinks: [IdeaLink]
+    @Query private var settings: [AppSetting]
     @Bindable var idea: Idea
     let openIdea: (UUID) -> Void
     let close: () -> Void
@@ -423,6 +428,7 @@ struct IdeaEditorView: View {
     @FocusState private var tagFieldFocused: Bool
     @State private var saveState = "Saved"
     @State private var showingRelations = false
+    @State private var showingIconPicker = false
     @State private var autosaveTask: Task<Void, Never>?
 
     private var outgoingLinks: [IdeaLink] { allLinks.filter { $0.sourceID == idea.id } }
@@ -443,9 +449,7 @@ struct IdeaEditorView: View {
                 VStack(alignment: .leading, spacing: 20) {
                     pageBreadcrumb
 
-                    TextField("Untitled", text: $idea.title, axis: .vertical)
-                        .textFieldStyle(.plain).font(.system(size: 34, weight: .bold))
-                        .onChange(of: idea.title) { scheduleSave() }
+                    titleBlock
 
                     tags
 
@@ -453,6 +457,7 @@ struct IdeaEditorView: View {
                         text: $idea.content,
                         createPage: makeSubpage,
                         pageTitle: { id in allIdeas.first { $0.id == id }?.title },
+                        pageIcon: { id in PageIcon.read(id, from: settings) },
                         openPage: { openIdea($0) }
                     )
                     .onChange(of: idea.content) { scheduleSave() }
@@ -492,20 +497,80 @@ struct IdeaEditorView: View {
     }
 
     @ViewBuilder private var pageBreadcrumb: some View {
-        if let parent {
-            HStack(spacing: 7) {
-                Button { openIdea(parent.id) } label: {
-                    Label(parent.title.isEmpty ? "Untitled" : parent.title, systemImage: "doc.text")
+        let trail = IdeaHierarchy.ancestors(of: idea, in: allIdeas)
+        if !trail.isEmpty {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 6) {
+                    ForEach(trail) { ancestor in
+                        Button { openIdea(ancestor.id) } label: {
+                            HStack(spacing: 5) {
+                                crumbIcon(for: ancestor.id)
+                                Text(ancestor.title.isEmpty ? "Untitled" : ancestor.title).lineLimit(1)
+                            }
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .foregroundStyle(OrbitTheme.ink2(scheme))
+
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 8, weight: .semibold))
+                            .foregroundStyle(OrbitTheme.ink3(scheme))
+                    }
+
+                    HStack(spacing: 5) {
+                        crumbIcon(for: idea.id)
+                        Text(idea.title.isEmpty ? "Untitled page" : idea.title).lineLimit(1)
+                    }
+                    .foregroundStyle(OrbitTheme.ink3(scheme))
+
+                    Button("Move to top level") { idea.parentID = nil; scheduleSave() }
+                        .buttonStyle(.plain).font(.system(size: 10.5)).foregroundStyle(OrbitTheme.accent)
+                        .padding(.leading, 4)
+                        .help("Detach this page from its parent idea")
                 }
-                .buttonStyle(.plain).foregroundStyle(OrbitTheme.ink2(scheme))
-                Image(systemName: "chevron.right").font(.system(size: 9, weight: .semibold)).foregroundStyle(OrbitTheme.ink3(scheme))
-                Text(idea.title.isEmpty ? "Untitled page" : idea.title).foregroundStyle(OrbitTheme.ink3(scheme))
-                Button("Move to top level") { idea.parentID = nil; scheduleSave() }
-                    .buttonStyle(.plain).font(.system(size: 10.5)).foregroundStyle(OrbitTheme.accent)
-                    .padding(.leading, 4)
-                    .help("Detach this page from its parent idea")
+                .font(.system(size: 11.5, weight: .medium))
+                .padding(.bottom, 2)
             }
-            .font(.system(size: 11.5, weight: .medium))
+        }
+    }
+
+    @ViewBuilder private func crumbIcon(for id: UUID) -> some View {
+        if let icon = PageIcon.read(id, from: settings) {
+            Text(icon).font(.system(size: 11))
+        } else {
+            Image(systemName: "doc.text").font(.system(size: 10))
+        }
+    }
+
+    /// Notion puts the icon above the title, with an "Add icon" affordance that
+    /// only shows up when the page has none.
+    private var titleBlock: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            let icon = PageIcon.read(idea.id, from: settings)
+
+            Button { showingIconPicker = true } label: {
+                if let icon {
+                    Text(icon).font(.system(size: 56)).frame(height: 66, alignment: .leading)
+                } else {
+                    Label("Add icon", systemImage: "face.smiling")
+                        .font(.system(size: 11.5, weight: .medium))
+                        .foregroundStyle(OrbitTheme.ink3(scheme))
+                        .padding(.horizontal, 8).frame(height: 26)
+                        .background(OrbitTheme.sunken(scheme), in: RoundedRectangle(cornerRadius: 6))
+                }
+            }
+            .buttonStyle(.plain)
+            .help(icon == nil ? "Add a page icon" : "Change page icon")
+            .popover(isPresented: $showingIconPicker, arrowEdge: .bottom) {
+                PageIconPicker(current: icon) { chosen in
+                    PageIcon.write(chosen, for: idea.id, settings: settings, context: modelContext)
+                    scheduleSave()
+                }
+            }
+
+            TextField("Untitled", text: $idea.title, axis: .vertical)
+                .textFieldStyle(.plain).font(.system(size: 34, weight: .bold))
+                .onChange(of: idea.title) { scheduleSave() }
         }
     }
 
@@ -693,6 +758,7 @@ struct IdeaEditorView: View {
         let ideaID = idea.id
         allLinks.filter { $0.sourceID == ideaID || $0.targetID == ideaID }.forEach(modelContext.delete)
         children.forEach { $0.parentID = nil }
+        PageIcon.clear(ideaID, settings: settings, context: modelContext)
         modelContext.delete(idea); try? modelContext.save(); close()
     }
 }

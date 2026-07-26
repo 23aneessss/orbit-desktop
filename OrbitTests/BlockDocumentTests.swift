@@ -198,3 +198,76 @@ final class BlockShortcutTests: XCTestCase {
         XCTAssertNil(BlockShortcut.match("- not a bullet in code", in: .code))
     }
 }
+
+// MARK: - Nested page path
+
+@MainActor
+final class IdeaHierarchyTests: XCTestCase {
+    func testAncestorsReturnTheFullPathRootFirst() {
+        let root = Idea(title: "ETIC")
+        let middle = Idea(title: "President du club", parentID: root.id)
+        let leaf = Idea(title: "points positive", parentID: middle.id)
+        let all = [leaf, middle, root]
+
+        XCTAssertEqual(IdeaHierarchy.ancestors(of: leaf, in: all).map(\.title), ["ETIC", "President du club"])
+        XCTAssertEqual(IdeaHierarchy.depth(of: leaf, in: all), 2)
+    }
+
+    func testATopLevelPageHasNoAncestors() {
+        let root = Idea(title: "ETIC")
+        XCTAssertTrue(IdeaHierarchy.ancestors(of: root, in: [root]).isEmpty)
+    }
+
+    func testACorruptParentCycleTerminatesInsteadOfHanging() {
+        // parentID is a bare UUID with no storage-level cycle check, so a
+        // restored backup could produce this. It must not spin forever.
+        let first = Idea(title: "A")
+        let second = Idea(title: "B", parentID: first.id)
+        first.parentID = second.id
+
+        let chain = IdeaHierarchy.ancestors(of: first, in: [first, second])
+        XCTAssertEqual(chain.map(\.title), ["B"])
+    }
+
+    func testAMissingParentStopsTheChainWithoutCrashing() {
+        let orphan = Idea(title: "Orphan", parentID: UUID())
+        XCTAssertTrue(IdeaHierarchy.ancestors(of: orphan, in: [orphan]).isEmpty)
+    }
+}
+
+@MainActor
+final class PageIconTests: XCTestCase {
+    func testIconKeysAreNamespacedPerIdea() {
+        let first = UUID(), second = UUID()
+        XCTAssertNotEqual(PageIcon.key(for: first), PageIcon.key(for: second))
+        XCTAssertTrue(PageIcon.key(for: first).hasPrefix(PageIcon.keyPrefix))
+    }
+
+    func testReadingFindsOnlyTheMatchingIdeaAndIgnoresAppSettings() {
+        let target = UUID(), other = UUID()
+        let settings = [
+            AppSetting(key: "theme", value: "dark"),
+            AppSetting(key: "accent", value: "#F43F5E"),
+            AppSetting(key: PageIcon.key(for: target), value: "🚀"),
+            AppSetting(key: PageIcon.key(for: other), value: "📄")
+        ]
+
+        XCTAssertEqual(PageIcon.read(target, from: settings), "🚀")
+        XCTAssertEqual(PageIcon.read(other, from: settings), "📄")
+        XCTAssertNil(PageIcon.read(UUID(), from: settings))
+    }
+
+    func testAnEmptyStoredValueReadsAsNoIcon() {
+        let id = UUID()
+        XCTAssertNil(PageIcon.read(id, from: [AppSetting(key: PageIcon.key(for: id), value: "")]))
+    }
+
+    func testCatalogSearchMatchesKeywordsAndDeduplicates() {
+        XCTAssertTrue(EmojiCatalog.search("rocket").contains { $0.emoji == "🚀" })
+        XCTAssertTrue(EmojiCatalog.search("goal").contains { $0.emoji == "🎯" })
+        XCTAssertTrue(EmojiCatalog.search("zzzznope").isEmpty)
+
+        let listMatches = EmojiCatalog.search("list")
+        XCTAssertEqual(listMatches.count, Set(listMatches.map(\.emoji)).count)
+    }
+}
