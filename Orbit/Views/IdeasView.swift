@@ -424,7 +424,6 @@ struct IdeaEditorView: View {
     @State private var saveState = "Saved"
     @State private var autosaveTask: Task<Void, Never>?
 
-    private var wordCount: Int { idea.content.split(whereSeparator: \.isWhitespace).count }
     private var outgoingLinks: [IdeaLink] { allLinks.filter { $0.sourceID == idea.id } }
     private var incomingLinks: [IdeaLink] { allLinks.filter { $0.targetID == idea.id } }
     private var children: [Idea] { allIdeas.filter { $0.parentID == idea.id }.sorted { $0.updatedAt > $1.updatedAt } }
@@ -439,29 +438,23 @@ struct IdeaEditorView: View {
             editorHeader
             Divider().overlay(OrbitTheme.line(scheme))
 
-            HStack(alignment: .top, spacing: 0) {
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 20) {
-                        pageBreadcrumb
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
+                    pageBreadcrumb
 
-                        TextField("Untitled", text: $idea.title, axis: .vertical)
-                            .textFieldStyle(.plain).font(.system(size: 30, weight: .semibold))
-                            .onChange(of: idea.title) { scheduleSave() }
+                    TextField("Untitled", text: $idea.title, axis: .vertical)
+                        .textFieldStyle(.plain).font(.system(size: 34, weight: .bold))
+                        .onChange(of: idea.title) { scheduleSave() }
 
-                        tags
-                        relationships
-                        subpages
+                    tags
+                    relationships
+                    subpages
 
-                        MarkdownWorkspace(text: $idea.content)
-                            .frame(minHeight: 560)
-                            .onChange(of: idea.content) { scheduleSave() }
-                    }
-                    .padding(.horizontal, 46).padding(.vertical, 32)
-                    .frame(maxWidth: 900, alignment: .leading).frame(maxWidth: .infinity)
+                    BlockEditorView(text: $idea.content)
+                        .onChange(of: idea.content) { scheduleSave() }
                 }
-
-                Divider().overlay(OrbitTheme.line(scheme))
-                documentSidebar
+                .padding(.horizontal, 54).padding(.top, 34).padding(.bottom, 8)
+                .frame(maxWidth: 1000, alignment: .leading).frame(maxWidth: .infinity)
             }
         }
         .background(OrbitTheme.canvas(scheme))
@@ -490,6 +483,10 @@ struct IdeaEditorView: View {
                 .buttonStyle(.plain).foregroundStyle(OrbitTheme.ink2(scheme))
                 Image(systemName: "chevron.right").font(.system(size: 9, weight: .semibold)).foregroundStyle(OrbitTheme.ink3(scheme))
                 Text(idea.title.isEmpty ? "Untitled page" : idea.title).foregroundStyle(OrbitTheme.ink3(scheme))
+                Button("Move to top level") { idea.parentID = nil; scheduleSave() }
+                    .buttonStyle(.plain).font(.system(size: 10.5)).foregroundStyle(OrbitTheme.accent)
+                    .padding(.leading, 4)
+                    .help("Detach this page from its parent idea")
             }
             .font(.system(size: 11.5, weight: .medium))
         }
@@ -652,36 +649,6 @@ struct IdeaEditorView: View {
                 }
             }
         }
-    }
-
-    private var documentSidebar: some View {
-        VStack(alignment: .leading, spacing: 18) {
-            Text("Document").font(.system(size: 13.5, weight: .semibold))
-            stat("Words", "\(wordCount)")
-            stat("Characters", "\(idea.content.count)")
-            stat("Subpages", "\(children.count)")
-            stat("Relations", "\(outgoingLinks.count + incomingLinks.count)")
-            Divider().overlay(OrbitTheme.line(scheme))
-            if let parent {
-                VStack(alignment: .leading, spacing: 7) {
-                    Text("Parent page").font(.system(size: 11.5)).foregroundStyle(OrbitTheme.ink2(scheme))
-                    Button(parent.title.isEmpty ? "Untitled" : parent.title) { openIdea(parent.id) }
-                        .buttonStyle(.plain).font(.system(size: 11.5, weight: .medium)).lineLimit(2)
-                    Button("Move to top level") { idea.parentID = nil; scheduleSave() }
-                        .buttonStyle(.plain).font(.system(size: 10.5)).foregroundStyle(OrbitTheme.accent)
-                }
-                Divider().overlay(OrbitTheme.line(scheme))
-            }
-            stat("Created", idea.createdAt.formatted(date: .abbreviated, time: .omitted))
-            stat("Edited", idea.updatedAt.formatted(date: .abbreviated, time: .shortened))
-            Spacer()
-        }
-        .padding(24).frame(width: 250, alignment: .leading).background(OrbitTheme.sunken(scheme).opacity(0.38))
-    }
-
-    private func stat(_ label: String, _ value: String) -> some View {
-        HStack { Text(label).foregroundStyle(OrbitTheme.ink2(scheme)); Spacer(); Text(value).monospacedDigit() }
-            .font(.system(size: 11.5))
     }
 
     private func addTag() {

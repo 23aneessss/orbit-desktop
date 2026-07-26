@@ -116,6 +116,53 @@ final class BlockNSTextView: NSTextView {
         return ok
     }
 
+    /// Cmd-B / Cmd-I / Cmd-E wrap the selection in markdown, since the document
+    /// is plain text and AppKit's rich-text bold has nothing to act on.
+    override func performKeyEquivalent(with event: NSEvent) -> Bool {
+        guard event.modifierFlags.intersection(.deviceIndependentFlagsMask) == .command,
+              blockKind != .code,
+              let key = event.charactersIgnoringModifiers?.lowercased() else {
+            return super.performKeyEquivalent(with: event)
+        }
+        switch key {
+        case "b": wrapSelection(with: "**"); return true
+        case "i": wrapSelection(with: "*"); return true
+        case "e": wrapSelection(with: "`"); return true
+        default: return super.performKeyEquivalent(with: event)
+        }
+    }
+
+    private func wrapSelection(with marker: String) {
+        let range = selectedRange()
+        let text = string as NSString
+        let selected = range.length > 0 ? text.substring(with: range) : ""
+
+        // Toggle off when the selection is already wrapped.
+        let outer = NSRange(
+            location: max(0, range.location - marker.count),
+            length: min(range.length + marker.count * 2, text.length - max(0, range.location - marker.count))
+        )
+        if range.location >= marker.count,
+           outer.length == range.length + marker.count * 2,
+           text.substring(with: outer).hasPrefix(marker),
+           text.substring(with: outer).hasSuffix(marker) {
+            guard shouldChangeText(in: outer, replacementString: selected) else { return }
+            replaceCharacters(in: outer, with: selected)
+            didChangeText()
+            setSelectedRange(NSRange(location: outer.location, length: (selected as NSString).length))
+            return
+        }
+
+        let replacement = marker + selected + marker
+        guard shouldChangeText(in: range, replacementString: replacement) else { return }
+        replaceCharacters(in: range, with: replacement)
+        didChangeText()
+        setSelectedRange(NSRange(
+            location: range.location + marker.count,
+            length: (selected as NSString).length
+        ))
+    }
+
     override func doCommand(by selector: Selector) {
         // While the slash menu is up it owns the arrows and Return.
         if menuIsOpen {

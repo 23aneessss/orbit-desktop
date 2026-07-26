@@ -10,6 +10,7 @@
 		0B108A04325E375330215A8F /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 495DCA72659439056D676B45 /* HomeView.swift */; };
 		0C0F9C5BC526F88FEF38E9DE /* ImportService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 51C75835C9455A83B47B5E64 /* ImportService.swift */; };
 		0E7452D1BDAB765F61F97BC1 /* IdeasView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0932C8BD5D10F4ACA0F61536 /* IdeasView.swift */; };
+		0F7181EFB38467BEBD61A0E9 /* BlockTextView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B93AD973C2ACA573B6F5BB1C /* BlockTextView.swift */; };
 		1422A0758899739CFAF25423 /* ImportServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4EE5D477AB5624DD9F40103 /* ImportServiceTests.swift */; };
 		2375987409E9D494F95E95BA /* DateUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1AE6983885089AF77C700BD0 /* DateUtils.swift */; };
 		2B4A710673B3F7E20419E08F /* TasksView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 46E8F8129B179906DA04E4B1 /* TasksView.swift */; };
@@ -18,8 +19,9 @@
 		46F48D553FD3ABE560B624F5 /* OrbitTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66D0C8FB4C74F5AC31C6D25F /* OrbitTheme.swift */; };
 		567604D291F59AED5CA123E8 /* TaskCompletionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 528B3CA5A15B87580BF57635 /* TaskCompletionService.swift */; };
 		7C8B5DFF0911F41E6BF9FA4D /* PeopleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BBF9172C28578B7EBBFC4A3 /* PeopleView.swift */; };
-		873A3B554C2E9B9F43ACDAE0 /* MarkdownUI in Frameworks */ = {isa = PBXBuildFile; productRef = C01F04352669B9DDBB0B5FD4 /* MarkdownUI */; };
+		941F215F7CC18B3AE05CA4D0 /* BlockDocument.swift in Sources */ = {isa = PBXBuildFile; fileRef = EFC621EF0E10C8C21C7D49FB /* BlockDocument.swift */; };
 		B453DEBCA4D678859B1058AD /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E37DA3D4A718D5948DEF3A7 /* SettingsView.swift */; };
+		B7979E4D4E31B36678568215 /* BlockEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2E2389E651737C735A3FF7D /* BlockEditorView.swift */; };
 		C84CD846CA563A5CF677B913 /* TaskCompletionServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02F7E45F3FFC1304FBF4D383 /* TaskCompletionServiceTests.swift */; };
 		CA6E9744FE03121F63830BC5 /* HabitsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6C93F7462D5C0BD68900D13 /* HabitsView.swift */; };
 		CC6551206571FF3F046080C5 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = B24FD058B7D00E7C9D29DA78 /* Models.swift */; };
@@ -28,7 +30,6 @@
 		E65C66D700AE1B182DC8BC7B /* OrbitApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5DFA77B4FD4DF15BC26FEA45 /* OrbitApp.swift */; };
 		F03996CBB18D50F3F5DC0948 /* IdeaCanvasView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01EBFA456712515A8DC008C /* IdeaCanvasView.swift */; };
 		F2B8261C6ABC92342017674C /* SeedService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3B93F37C0E112C39B3A0891 /* SeedService.swift */; };
-		F82752A692AC66BDD60140C8 /* MarkdownEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2FABDE84B3E9F1BD6C1E97F1 /* MarkdownEditorView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -46,7 +47,6 @@
 		0932C8BD5D10F4ACA0F61536 /* IdeasView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IdeasView.swift; sourceTree = "<group>"; };
 		1AE6983885089AF77C700BD0 /* DateUtils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DateUtils.swift; sourceTree = "<group>"; };
 		20936134E6681D18358932B7 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
-		2FABDE84B3E9F1BD6C1E97F1 /* MarkdownEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarkdownEditorView.swift; sourceTree = "<group>"; };
 		46E8F8129B179906DA04E4B1 /* TasksView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TasksView.swift; sourceTree = "<group>"; };
 		495DCA72659439056D676B45 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
 		4BBF9172C28578B7EBBFC4A3 /* PeopleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PeopleView.swift; sourceTree = "<group>"; };
@@ -62,21 +62,13 @@
 		A3B93F37C0E112C39B3A0891 /* SeedService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeedService.swift; sourceTree = "<group>"; };
 		A6C93F7462D5C0BD68900D13 /* HabitsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HabitsView.swift; sourceTree = "<group>"; };
 		B24FD058B7D00E7C9D29DA78 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
+		B93AD973C2ACA573B6F5BB1C /* BlockTextView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlockTextView.swift; sourceTree = "<group>"; };
 		CB6EA1CF569ADED12529C446 /* AppIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = wrapper.icon; path = AppIcon.icon; sourceTree = "<group>"; };
 		D01EBFA456712515A8DC008C /* IdeaCanvasView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IdeaCanvasView.swift; sourceTree = "<group>"; };
+		D2E2389E651737C735A3FF7D /* BlockEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlockEditorView.swift; sourceTree = "<group>"; };
 		E4EE5D477AB5624DD9F40103 /* ImportServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportServiceTests.swift; sourceTree = "<group>"; };
+		EFC621EF0E10C8C21C7D49FB /* BlockDocument.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlockDocument.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
-
-/* Begin PBXFrameworksBuildPhase section */
-		AC23419267EB092E8D8A05AB /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				873A3B554C2E9B9F43ACDAE0 /* MarkdownUI in Frameworks */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-/* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
 		00ECA7FF55D55998AD25B1CA /* Orbit */ = {
@@ -86,6 +78,7 @@
 				20936134E6681D18358932B7 /* Assets.xcassets */,
 				C780FD695A6D5038F772063E /* App */,
 				CD0EBA264946CA289F19D651 /* Design */,
+				522922413EC86B831B4F9F8B /* Editor */,
 				67396201ACDD149AA1629C59 /* Models */,
 				D815CFAF7DC21058B9875359 /* Services */,
 				0B0319ECFE2BFD3E36F81BDE /* Utilities */,
@@ -101,6 +94,16 @@
 				528B3CA5A15B87580BF57635 /* TaskCompletionService.swift */,
 			);
 			path = Utilities;
+			sourceTree = "<group>";
+		};
+		522922413EC86B831B4F9F8B /* Editor */ = {
+			isa = PBXGroup;
+			children = (
+				EFC621EF0E10C8C21C7D49FB /* BlockDocument.swift */,
+				D2E2389E651737C735A3FF7D /* BlockEditorView.swift */,
+				B93AD973C2ACA573B6F5BB1C /* BlockTextView.swift */,
+			);
+			path = Editor;
 			sourceTree = "<group>";
 		};
 		67396201ACDD149AA1629C59 /* Models */ = {
@@ -128,7 +131,6 @@
 				495DCA72659439056D676B45 /* HomeView.swift */,
 				D01EBFA456712515A8DC008C /* IdeaCanvasView.swift */,
 				0932C8BD5D10F4ACA0F61536 /* IdeasView.swift */,
-				2FABDE84B3E9F1BD6C1E97F1 /* MarkdownEditorView.swift */,
 				4BBF9172C28578B7EBBFC4A3 /* PeopleView.swift */,
 				4E37DA3D4A718D5948DEF3A7 /* SettingsView.swift */,
 				46E8F8129B179906DA04E4B1 /* TasksView.swift */,
@@ -207,7 +209,6 @@
 			buildPhases = (
 				1A83EACBC247740EBC0E6135 /* Sources */,
 				744EABC5C142532226634E12 /* Resources */,
-				AC23419267EB092E8D8A05AB /* Frameworks */,
 			);
 			buildRules = (
 			);
@@ -215,7 +216,6 @@
 			);
 			name = Orbit;
 			packageProductDependencies = (
-				C01F04352669B9DDBB0B5FD4 /* MarkdownUI */,
 			);
 			productName = Orbit;
 			productReference = 93E43D9E19F5EF7D480B0771 /* Orbit.app */;
@@ -244,9 +244,6 @@
 			);
 			mainGroup = C5F01767FDAE31EE06DFF523;
 			minimizedProjectReferenceProxies = 1;
-			packageReferences = (
-				A2EB572CB58D32D89E10F037 /* XCRemoteSwiftPackageReference "swift-markdown-ui" */,
-			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = B307547D1ABD752BE02491B9 /* Products */;
 			projectDirPath = "";
@@ -276,6 +273,9 @@
 			buildActionMask = 2147483647;
 			files = (
 				DFA228DFFA78D438F8BA5FC8 /* AppShellView.swift in Sources */,
+				941F215F7CC18B3AE05CA4D0 /* BlockDocument.swift in Sources */,
+				B7979E4D4E31B36678568215 /* BlockEditorView.swift in Sources */,
+				0F7181EFB38467BEBD61A0E9 /* BlockTextView.swift in Sources */,
 				2375987409E9D494F95E95BA /* DateUtils.swift in Sources */,
 				30CB47074901942DD762E6DD /* ExportService.swift in Sources */,
 				CA6E9744FE03121F63830BC5 /* HabitsView.swift in Sources */,
@@ -283,7 +283,6 @@
 				F03996CBB18D50F3F5DC0948 /* IdeaCanvasView.swift in Sources */,
 				0E7452D1BDAB765F61F97BC1 /* IdeasView.swift in Sources */,
 				0C0F9C5BC526F88FEF38E9DE /* ImportService.swift in Sources */,
-				F82752A692AC66BDD60140C8 /* MarkdownEditorView.swift in Sources */,
 				CC6551206571FF3F046080C5 /* Models.swift in Sources */,
 				E65C66D700AE1B182DC8BC7B /* OrbitApp.swift in Sources */,
 				46F48D553FD3ABE560B624F5 /* OrbitTheme.swift in Sources */,
@@ -541,25 +540,6 @@
 			defaultConfigurationName = Debug;
 		};
 /* End XCConfigurationList section */
-
-/* Begin XCRemoteSwiftPackageReference section */
-		A2EB572CB58D32D89E10F037 /* XCRemoteSwiftPackageReference "swift-markdown-ui" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/gonzalezreal/swift-markdown-ui";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 2.4.1;
-			};
-		};
-/* End XCRemoteSwiftPackageReference section */
-
-/* Begin XCSwiftPackageProductDependency section */
-		C01F04352669B9DDBB0B5FD4 /* MarkdownUI */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = A2EB572CB58D32D89E10F037 /* XCRemoteSwiftPackageReference "swift-markdown-ui" */;
-			productName = MarkdownUI;
-		};
-/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 0A57824173AF238C16E5DFDB /* Project object */;
 }
