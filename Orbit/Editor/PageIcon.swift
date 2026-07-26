@@ -105,6 +105,12 @@ enum EmojiCatalog {
             }
         }
 
+        // ZWJ sequences are composed of several scalars joined by U+200D, so
+        // scalar enumeration cannot see them. They have to be listed.
+        for (emoji, keywords, category) in zwjSequences {
+            buckets[category, default: []].append(Entry(emoji: emoji, keywords: keywords))
+        }
+
         buckets[.flags] = flagEntries()
         buckets[.suggested] = suggested.map { emoji in
             Entry(emoji: emoji, keywords: (aliases[emoji] ?? "") + " " + (unicodeName(of: emoji) ?? ""))
@@ -251,9 +257,69 @@ enum EmojiCatalog {
         "🍕": "pizza food lunch", "☕": "coffee cafe morning break"
     ]
 
+    /// Multi-scalar emoji (professions, couples, families, gendered variants).
+    /// Skin-tone modifiers are deliberately left out — they would multiply this
+    /// fivefold for no gain as a page icon.
+    private static let zwjSequences: [(String, String, Category)] = [
+        ("\u{1F9D1}\u{200D}\u{1F4BB}", "technologist developer engineer coder programmer", .smileys),
+        ("\u{1F468}\u{200D}\u{1F4BB}", "man technologist developer engineer coder", .smileys),
+        ("\u{1F469}\u{200D}\u{1F4BB}", "woman technologist developer engineer coder", .smileys),
+        ("\u{1F9D1}\u{200D}\u{1F3A8}", "artist designer creative painter", .smileys),
+        ("\u{1F468}\u{200D}\u{1F3A8}", "man artist designer painter", .smileys),
+        ("\u{1F469}\u{200D}\u{1F3A8}", "woman artist designer painter", .smileys),
+        ("\u{1F9D1}\u{200D}\u{1F52C}", "scientist researcher lab science", .smileys),
+        ("\u{1F468}\u{200D}\u{1F52C}", "man scientist researcher science", .smileys),
+        ("\u{1F469}\u{200D}\u{1F52C}", "woman scientist researcher science", .smileys),
+        ("\u{1F9D1}\u{200D}\u{1F393}", "student graduate study school learn", .smileys),
+        ("\u{1F468}\u{200D}\u{1F393}", "man student graduate study", .smileys),
+        ("\u{1F469}\u{200D}\u{1F393}", "woman student graduate study", .smileys),
+        ("\u{1F9D1}\u{200D}\u{1F3EB}", "teacher professor educator school", .smileys),
+        ("\u{1F468}\u{200D}\u{1F3EB}", "man teacher professor educator", .smileys),
+        ("\u{1F469}\u{200D}\u{1F3EB}", "woman teacher professor educator", .smileys),
+        ("\u{1F9D1}\u{200D}\u{2696}\u{FE0F}", "judge justice law legal court", .smileys),
+        ("\u{1F9D1}\u{200D}\u{1F33E}", "farmer agriculture crop field", .smileys),
+        ("\u{1F9D1}\u{200D}\u{1F373}", "cook chef kitchen restaurant", .smileys),
+        ("\u{1F468}\u{200D}\u{1F373}", "man cook chef kitchen", .smileys),
+        ("\u{1F469}\u{200D}\u{1F373}", "woman cook chef kitchen", .smileys),
+        ("\u{1F9D1}\u{200D}\u{1F527}", "mechanic engineer repair fix tools", .smileys),
+        ("\u{1F9D1}\u{200D}\u{1F3ED}", "factory worker industry manufacturing", .smileys),
+        ("\u{1F9D1}\u{200D}\u{1F4BC}", "office worker business manager executive", .smileys),
+        ("\u{1F468}\u{200D}\u{1F4BC}", "man office worker business manager", .smileys),
+        ("\u{1F469}\u{200D}\u{1F4BC}", "woman office worker business manager", .smileys),
+        ("\u{1F9D1}\u{200D}\u{1F680}", "astronaut space rocket explorer", .smileys),
+        ("\u{1F468}\u{200D}\u{1F680}", "man astronaut space rocket", .smileys),
+        ("\u{1F469}\u{200D}\u{1F680}", "woman astronaut space rocket", .smileys),
+        ("\u{1F9D1}\u{200D}\u{1F692}", "firefighter fire rescue emergency", .smileys),
+        ("\u{1F9D1}\u{200D}\u{2695}\u{FE0F}", "health worker doctor nurse medical", .smileys),
+        ("\u{1F468}\u{200D}\u{2695}\u{FE0F}", "man doctor health medical", .smileys),
+        ("\u{1F469}\u{200D}\u{2695}\u{FE0F}", "woman doctor health medical", .smileys),
+        ("\u{1F9D1}\u{200D}\u{2708}\u{FE0F}", "pilot aviation plane fly", .smileys),
+        ("\u{1F9D1}\u{200D}\u{1F9BD}", "wheelchair accessibility manual", .smileys),
+        ("\u{1F9D1}\u{200D}\u{1F9AF}", "blind cane accessibility white", .smileys),
+        ("\u{1F468}\u{200D}\u{1F469}\u{200D}\u{1F466}", "family parents child", .smileys),
+        ("\u{1F468}\u{200D}\u{1F469}\u{200D}\u{1F467}", "family parents daughter", .smileys),
+        ("\u{1F469}\u{200D}\u{1F469}\u{200D}\u{1F466}", "family two mothers child", .smileys),
+        ("\u{1F468}\u{200D}\u{1F468}\u{200D}\u{1F466}", "family two fathers child", .smileys),
+        ("\u{1F469}\u{200D}\u{2764}\u{FE0F}\u{200D}\u{1F468}", "couple heart love partners", .smileys),
+        ("\u{1F468}\u{200D}\u{2764}\u{FE0F}\u{200D}\u{1F468}", "couple heart love men", .smileys),
+        ("\u{1F469}\u{200D}\u{2764}\u{FE0F}\u{200D}\u{1F469}", "couple heart love women", .smileys),
+        ("\u{1F3F3}\u{FE0F}\u{200D}\u{1F308}", "rainbow flag pride lgbt", .flags),
+        ("\u{1F3F4}\u{200D}\u{2620}\u{FE0F}", "pirate flag jolly roger skull", .flags),
+        ("\u{1F3F3}\u{FE0F}\u{200D}\u{26A7}\u{FE0F}", "transgender flag pride", .flags),
+        ("\u{1F441}\u{FE0F}\u{200D}\u{1F5E8}\u{FE0F}", "eye speech witness testimony", .symbols),
+        ("\u{2764}\u{FE0F}\u{200D}\u{1F525}", "heart on fire burning love passion", .symbols),
+        ("\u{2764}\u{FE0F}\u{200D}\u{1FA79}", "mending heart healing broken recovery", .symbols),
+        ("\u{1F408}\u{200D}\u{2B1B}", "black cat animal", .nature),
+        ("\u{1F415}\u{200D}\u{1F9BA}", "service dog assistance animal", .nature),
+        ("\u{1F426}\u{200D}\u{2B1B}", "black bird crow raven", .nature),
+        ("\u{1F43B}\u{200D}\u{2744}\u{FE0F}", "polar bear arctic white", .nature),
+        ("\u{1F344}\u{200D}\u{1F7EB}", "brown mushroom fungus", .nature)
+    ]
+
     private static let suggested = [
         "📄", "📝", "📌", "⭐", "🔥", "✅", "🎯", "💡", "🚀", "📊", "🗂️", "🔖",
-        "🧠", "✨", "💼", "📅", "🏆", "🤝", "🐛", "⚙️", "🌱", "❤️", "🔒", "🎨"
+        "🧠", "✨", "💼", "📅", "🏆", "🤝", "🐛", "⚙️", "🌱", "❤️", "🔒", "🎨",
+        "\u{1F9D1}\u{200D}\u{1F4BB}", "\u{1F680}", "\u{1F4CA}", "\u{1F393}"
     ]
 
     // MARK: flags

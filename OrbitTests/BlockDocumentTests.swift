@@ -274,6 +274,13 @@ final class PageIconTests: XCTestCase {
         XCTAssertGreaterThan(EmojiCatalog.groups.first { $0.category == .flags }?.entries.count ?? 0, 200)
     }
 
+    func testComposedZWJSequencesAreIncludedSinceScalarScanningMissesThem() {
+        XCTAssertTrue(EmojiCatalog.search("developer").contains { $0.emoji == "\u{1F9D1}\u{200D}\u{1F4BB}" })
+        XCTAssertTrue(EmojiCatalog.search("astronaut").contains { $0.emoji == "\u{1F9D1}\u{200D}\u{1F680}" })
+        XCTAssertTrue(EmojiCatalog.search("family").contains { $0.emoji.contains("\u{200D}") })
+        XCTAssertTrue(EmojiCatalog.search("pride").contains { $0.emoji.contains("\u{1F308}") })
+    }
+
     func testEveryEntryIsASingleRenderableGrapheme() {
         for entry in EmojiCatalog.all {
             XCTAssertEqual(entry.emoji.count, 1, "\(entry.emoji) is not one grapheme cluster")
