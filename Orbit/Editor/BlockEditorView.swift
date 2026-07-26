@@ -9,6 +9,11 @@ import UniformTypeIdentifiers
 struct BlockEditorView: View {
     @Binding var text: String
     var placeholder: String = "Start writing, or press / for commands"
+    /// Creates a real sub-page record and returns its id, so `/page` can link
+    /// to something that exists in the Ideas tree rather than a dangling id.
+    var createPage: (() -> UUID?)?
+    var pageTitle: ((UUID) -> String?)?
+    var openPage: ((UUID) -> Void)?
 
     @Environment(\.colorScheme) private var scheme
     @StateObject private var focus = BlockFocus()
@@ -150,7 +155,7 @@ struct BlockEditorView: View {
         Button("Duplicate", systemImage: "plus.square.on.square") { duplicate(block.id) }
         Divider()
         Menu("Turn into") {
-            ForEach(BlockKind.allCases, id: \.self) { kind in
+            ForEach(BlockKind.convertible, id: \.self) { kind in
                 Button(kind.title, systemImage: kind.symbol) { setKind(kind, for: block.id) }
                     .disabled(kind == block.kind)
             }
@@ -173,32 +178,37 @@ struct BlockEditorView: View {
             Text(bulletGlyph(for: block.indent))
                 .font(.system(size: 16))
                 .foregroundStyle(OrbitTheme.ink(scheme))
-                .frame(width: 22, height: 26, alignment: .center)
+                .frame(width: 24, height: BlockTypography.firstLineHeight(for: block.kind), alignment: .center)
 
         case .numbered:
             Text("\(numbering[block.id] ?? 1).")
                 .font(.system(size: 15))
                 .monospacedDigit()
                 .foregroundStyle(OrbitTheme.ink(scheme))
-                .frame(minWidth: 22, minHeight: 26, alignment: .trailing)
+                .frame(width: 24, height: BlockTypography.firstLineHeight(for: block.kind), alignment: .trailing)
 
         case .todo:
-            Button { toggleCheck(block.id) } label: {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 3.5, style: .continuous)
-                        .fill(block.checked ? OrbitTheme.accent : Color.clear)
-                    RoundedRectangle(cornerRadius: 3.5, style: .continuous)
-                        .stroke(block.checked ? OrbitTheme.accent : OrbitTheme.ink3(scheme), lineWidth: 1.4)
-                    if block.checked {
-                        Image(systemName: "checkmark")
-                            .font(.system(size: 9, weight: .bold))
-                            .foregroundStyle(.white)
-                    }
+            // The tap target must be a filled shape. A `Shape.stroke()` only
+            // hit-tests along the 1.4pt outline, which made the checkbox look
+            // clickable while swallowing every click that landed inside it.
+            ZStack {
+                RoundedRectangle(cornerRadius: 3.5, style: .continuous)
+                    .fill(block.checked ? OrbitTheme.accent : Color.clear)
+                RoundedRectangle(cornerRadius: 3.5, style: .continuous)
+                    .strokeBorder(block.checked ? OrbitTheme.accent : OrbitTheme.ink3(scheme), lineWidth: 1.4)
+                if block.checked {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 9.5, weight: .bold))
+                        .foregroundStyle(.white)
                 }
-                .frame(width: 16, height: 16)
             }
-            .buttonStyle(.plain)
-            .frame(width: 22, height: 26, alignment: .center)
+            .frame(width: 16, height: 16)
+            .contentShape(Rectangle())
+            .onTapGesture { toggleCheck(block.id) }
+            .frame(width: 24, height: BlockTypography.firstLineHeight(for: block.kind), alignment: .center)
+            .contentShape(Rectangle())
+            .accessibilityAddTraits(.isButton)
+            .accessibilityLabel(block.checked ? "Mark as not done" : "Mark as done")
             .help(block.checked ? "Mark as not done" : "Mark as done")
 
         default:
@@ -222,6 +232,9 @@ struct BlockEditorView: View {
         case .divider:
             dividerRow(block)
 
+        case .page:
+            pageRow(block)
+
         case .code:
             editor(for: block, isActive: isActive)
                 .padding(.vertical, 12)
@@ -244,6 +257,30 @@ struct BlockEditorView: View {
         default:
             editor(for: block, isActive: isActive)
         }
+    }
+
+    @ViewBuilder
+    private func pageRow(_ block: Block) -> some View {
+        let title = block.pageID.flatMap { pageTitle?($0) } ?? block.text
+        Button {
+            if let pageID = block.pageID { openPage?(pageID) }
+        } label: {
+            HStack(spacing: 9) {
+                Image(systemName: "doc.text")
+                    .font(.system(size: 14))
+                    .foregroundStyle(OrbitTheme.ink2(scheme))
+                Text(title.isEmpty ? "Untitled page" : title)
+                    .font(.system(size: 15.5, weight: .medium))
+                    .foregroundStyle(OrbitTheme.ink(scheme))
+                    .underline()
+                    .lineLimit(1)
+                Spacer(minLength: 0)
+            }
+            .padding(.vertical, 3)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .help("Open this sub-page")
     }
 
     @ViewBuilder
@@ -382,6 +419,26 @@ struct BlockEditorView: View {
         blocks[index].text = text
         blocks[index].kind = kind
         blocks[index].edited()
+
+        if kind == .page {
+            guard let newPageID = createPage?() else {
+                // No sub-page could be created — leave the block as plain text
+                // rather than writing a link that points at nothing.
+                blocks[index].kind = .paragraph
+                closeSlash()
+                commit()
+                focus.focus(blocks[index].id)
+                return
+            }
+            blocks[index].pageID = newPageID
+            blocks[index].text = ""
+            let follow = Block()
+            blocks.insert(follow, at: index + 1)
+            closeSlash()
+            commit()
+            focus.focus(follow.id, offset: 0)
+            return
+        }
 
         if kind == .divider {
             // A divider holds no text, so push any remainder into a new block.

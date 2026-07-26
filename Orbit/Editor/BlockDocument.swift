@@ -15,6 +15,8 @@ struct Block: Identifiable, Equatable {
     var checked: Bool = false
     var indent: Int = 0
     var language: String = ""
+    /// Set only on `.page` blocks — the `Idea` this block links to.
+    var pageID: UUID?
     var raw: String?
 
     init(
@@ -24,6 +26,7 @@ struct Block: Identifiable, Equatable {
         checked: Bool = false,
         indent: Int = 0,
         language: String = "",
+        pageID: UUID? = nil,
         raw: String? = nil
     ) {
         self.id = id
@@ -32,6 +35,7 @@ struct Block: Identifiable, Equatable {
         self.checked = checked
         self.indent = indent
         self.language = language
+        self.pageID = pageID
         self.raw = raw
     }
 
@@ -53,8 +57,13 @@ enum BlockKind: String, CaseIterable, Equatable {
     case quote
     case code
     case divider
+    case page
 
     var isList: Bool { self == .bulleted || self == .numbered || self == .todo }
+
+    /// `.page` is created by the slash menu against a real sub-page record, so
+    /// it is not something a plain text block can be converted into.
+    static var convertible: [BlockKind] { allCases.filter { $0 != .page } }
 
     /// Blocks whose kind carries to the next block when you press Return.
     var continuesOnReturn: Bool { isList || self == .quote }
@@ -71,6 +80,7 @@ enum BlockKind: String, CaseIterable, Equatable {
         case .quote: "Quote"
         case .code: "Code"
         case .divider: "Divider"
+        case .page: "Page"
         }
     }
 
@@ -86,6 +96,7 @@ enum BlockKind: String, CaseIterable, Equatable {
         case .quote: "Capture a quote."
         case .code: "Capture a snippet of code."
         case .divider: "Visually divide blocks."
+        case .page: "Create a sub-page inside this idea."
         }
     }
 
@@ -101,6 +112,7 @@ enum BlockKind: String, CaseIterable, Equatable {
         case .quote: "text.quote"
         case .code: "chevron.left.forwardslash.chevron.right"
         case .divider: "minus"
+        case .page: "doc.text"
         }
     }
 
@@ -117,6 +129,7 @@ enum BlockKind: String, CaseIterable, Equatable {
         case .quote: ["quote", "blockquote", "cite"]
         case .code: ["code", "snippet", "pre"]
         case .divider: ["divider", "separator", "rule", "line", "hr"]
+        case .page: ["page", "subpage", "sub-page", "doc", "document", "nested"]
         }
     }
 }
@@ -228,6 +241,10 @@ enum BlockDocument {
             return Block(kind: .quote, text: rest, indent: 0, raw: line)
         }
 
+        if let page = pageReference(body) {
+            return Block(kind: .page, text: page.title, indent: indent, pageID: page.id, raw: line)
+        }
+
         // Anything unrecognised — including `#### deep headings`, tables and
         // indented code — stays a paragraph holding the untouched source, so it
         // survives a round trip instead of being silently rewritten.
@@ -246,6 +263,9 @@ enum BlockDocument {
         case .todo: return pad + (block.checked ? "- [x] " : "- [ ] ") + block.text
         case .quote: return "> " + block.text
         case .divider: return "---"
+        case .page:
+            guard let pageID = block.pageID else { return block.text }
+            return pad + "[\(block.text)](\(BlockDocument.pageScheme)\(pageID.uuidString))"
         case .code:
             let head = block.language.isEmpty ? "```" : "```" + block.language
             return ([head] + block.text.components(separatedBy: "\n") + ["```"]).joined(separator: "\n")
@@ -313,6 +333,24 @@ enum BlockDocument {
         if after.isEmpty { return "" }
         guard after.first == " " else { return nil }
         return String(after.dropFirst())
+    }
+
+    /// Sub-pages are stored as an ordinary markdown link, so a note stays
+    /// readable (and portable) outside Orbit.
+    static let pageScheme = "orbit://idea/"
+
+    private static let pagePattern = try! NSRegularExpression(
+        pattern: #"^\[([^\]]*)\]\(orbit://idea/([0-9A-Fa-f-]{36})\)$"#
+    )
+
+    private static func pageReference(_ body: String) -> (title: String, id: UUID)? {
+        let range = NSRange(body.startIndex..., in: body)
+        guard let match = pagePattern.firstMatch(in: body, range: range),
+              match.numberOfRanges >= 3,
+              let titleRange = Range(match.range(at: 1), in: body),
+              let idRange = Range(match.range(at: 2), in: body),
+              let id = UUID(uuidString: String(body[idRange])) else { return nil }
+        return (String(body[titleRange]), id)
     }
 
     private static func quotePrefix(_ body: String) -> String? {

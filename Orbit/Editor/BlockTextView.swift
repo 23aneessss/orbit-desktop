@@ -14,6 +14,14 @@ enum BlockTypography {
         }
     }
 
+    /// Height of a single rendered line. Leading markers (bullet, number,
+    /// checkbox) centre themselves inside this so they line up with the first
+    /// line of text at any heading size instead of drifting.
+    static func firstLineHeight(for kind: BlockKind) -> CGFloat {
+        let font = font(for: kind)
+        return ceil(font.ascender - font.descender + font.leading)
+    }
+
     static func lineSpacing(for kind: BlockKind) -> CGFloat {
         switch kind {
         case .heading1, .heading2, .heading3: 2

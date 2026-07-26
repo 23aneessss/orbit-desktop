@@ -422,6 +422,7 @@ struct IdeaEditorView: View {
     @State private var tagDraft = ""
     @FocusState private var tagFieldFocused: Bool
     @State private var saveState = "Saved"
+    @State private var showingRelations = false
     @State private var autosaveTask: Task<Void, Never>?
 
     private var outgoingLinks: [IdeaLink] { allLinks.filter { $0.sourceID == idea.id } }
@@ -447,11 +448,14 @@ struct IdeaEditorView: View {
                         .onChange(of: idea.title) { scheduleSave() }
 
                     tags
-                    relationships
-                    subpages
 
-                    BlockEditorView(text: $idea.content)
-                        .onChange(of: idea.content) { scheduleSave() }
+                    BlockEditorView(
+                        text: $idea.content,
+                        createPage: makeSubpage,
+                        pageTitle: { id in allIdeas.first { $0.id == id }?.title },
+                        openPage: { openIdea($0) }
+                    )
+                    .onChange(of: idea.content) { scheduleSave() }
                 }
                 .padding(.horizontal, 54).padding(.top, 34).padding(.bottom, 8)
                 .frame(maxWidth: 1000, alignment: .leading).frame(maxWidth: .infinity)
@@ -466,6 +470,19 @@ struct IdeaEditorView: View {
             Button(action: close) { Label("Ideas", systemImage: "chevron.left") }.buttonStyle(.plain)
             Spacer()
             Text(saveState).font(.system(size: 11.5)).foregroundStyle(OrbitTheme.ink3(scheme))
+            Button { showingRelations.toggle() } label: {
+                HStack(spacing: 4) {
+                    Image(systemName: "arrow.triangle.branch")
+                    let count = outgoingLinks.count + incomingLinks.count
+                    if count > 0 {
+                        Text("\(count)").font(.system(size: 10, weight: .semibold)).monospacedDigit()
+                    }
+                }
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(showingRelations ? OrbitTheme.accent : OrbitTheme.ink2(scheme))
+            .help("Relationships")
+            .popover(isPresented: $showingRelations, arrowEdge: .bottom) { relationsPopover }
             Button { idea.pinned.toggle(); scheduleSave() } label: { Image(systemName: idea.pinned ? "pin.fill" : "pin") }
                 .buttonStyle(.plain).foregroundStyle(idea.pinned ? OrbitTheme.accent : OrbitTheme.ink2(scheme)).help(idea.pinned ? "Unpin" : "Pin")
             Button(role: .destructive) { deleteIdea() } label: { Image(systemName: "trash") }
@@ -547,35 +564,34 @@ struct IdeaEditorView: View {
         }
     }
 
-    private var relationships: some View {
+    private var relationsPopover: some View {
         VStack(alignment: .leading, spacing: 13) {
-            HStack {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("Relationships").font(.system(size: 13.5, weight: .semibold))
-                    Text("Directed links describe which ideas this page uses.")
-                        .font(.system(size: 11.5)).foregroundStyle(OrbitTheme.ink3(scheme))
-                }
-                Spacer()
-                Menu {
-                    if availableTargets.isEmpty {
-                        Text("No more ideas to connect")
-                    } else {
-                        ForEach(availableTargets) { target in
-                            Button(target.title.isEmpty ? "Untitled" : target.title) { addRelation(to: target) }
-                        }
-                    }
-                } label: {
-                    Label("Add relation", systemImage: "arrow.triangle.branch")
-                }
-                .buttonStyle(.bordered).controlSize(.small)
+            VStack(alignment: .leading, spacing: 3) {
+                Text("Relationships").font(.system(size: 13.5, weight: .semibold))
+                Text("Directed links describe which ideas this page uses.")
+                    .font(.system(size: 11)).foregroundStyle(OrbitTheme.ink3(scheme))
             }
 
             relationshipRow(title: "Uses", symbol: "arrow.right", links: outgoingLinks, targetKeyPath: \.targetID)
             relationshipRow(title: "Used by", symbol: "arrow.left", links: incomingLinks, targetKeyPath: \.sourceID)
+
+            Divider().overlay(OrbitTheme.line(scheme))
+
+            Menu {
+                if availableTargets.isEmpty {
+                    Text("No more ideas to connect")
+                } else {
+                    ForEach(availableTargets) { target in
+                        Button(target.title.isEmpty ? "Untitled" : target.title) { addRelation(to: target) }
+                    }
+                }
+            } label: {
+                Label("Add relation", systemImage: "plus")
+            }
+            .buttonStyle(.bordered).controlSize(.small).fixedSize()
         }
-        .padding(15)
-        .background(OrbitTheme.sunken(scheme).opacity(0.58), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-        .overlay { RoundedRectangle(cornerRadius: 12).stroke(OrbitTheme.line(scheme)) }
+        .padding(16)
+        .frame(width: 340, alignment: .leading)
     }
 
     private func relationshipRow(
@@ -586,8 +602,8 @@ struct IdeaEditorView: View {
     ) -> some View {
         HStack(alignment: .top, spacing: 10) {
             Label(title, systemImage: symbol)
-                .font(.system(size: 11.5, weight: .medium)).foregroundStyle(OrbitTheme.ink2(scheme))
-                .frame(width: 78, alignment: .leading).padding(.top, 5)
+                .font(.system(size: 11, weight: .medium)).foregroundStyle(OrbitTheme.ink2(scheme))
+                .frame(width: 62, alignment: .leading).padding(.top, 5)
             if links.isEmpty {
                 Text("None").font(.system(size: 11.5)).foregroundStyle(OrbitTheme.ink3(scheme)).padding(.top, 5)
             } else {
@@ -608,43 +624,6 @@ struct IdeaEditorView: View {
                                 .overlay { Capsule().stroke(OrbitTheme.line(scheme)) }
                             }
                         }
-                    }
-                }
-            }
-        }
-    }
-
-    private var subpages: some View {
-        VStack(alignment: .leading, spacing: 11) {
-            HStack {
-                Text("Pages inside this idea").font(.system(size: 13.5, weight: .semibold))
-                Spacer()
-                Button { createSubpage() } label: { Label("New subpage", systemImage: "doc.badge.plus") }
-                    .buttonStyle(.bordered).controlSize(.small)
-            }
-            if children.isEmpty {
-                Text("Break this idea into focused pages. Every subpage also appears as a node on the Canvas.")
-                    .font(.system(size: 11.5)).foregroundStyle(OrbitTheme.ink3(scheme))
-            } else {
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 210), spacing: 8)], spacing: 8) {
-                    ForEach(children) { child in
-                        Button { openIdea(child.id) } label: {
-                            HStack(spacing: 9) {
-                                Image(systemName: "doc.text").foregroundStyle(OrbitTheme.accent)
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(child.title.isEmpty ? "Untitled page" : child.title)
-                                        .font(.system(size: 12, weight: .semibold)).lineLimit(1)
-                                    Text(child.contentExcerpt.isEmpty ? "Empty page" : child.contentExcerpt)
-                                        .font(.system(size: 10.5)).foregroundStyle(OrbitTheme.ink3(scheme)).lineLimit(1)
-                                }
-                                Spacer()
-                                Image(systemName: "chevron.right").font(.system(size: 9, weight: .bold)).foregroundStyle(OrbitTheme.ink3(scheme))
-                            }
-                            .padding(.horizontal, 11).frame(height: 48)
-                            .background(OrbitTheme.surface(scheme), in: RoundedRectangle(cornerRadius: 9))
-                            .overlay { RoundedRectangle(cornerRadius: 9).stroke(OrbitTheme.line(scheme)) }
-                        }
-                        .buttonStyle(.plain)
                     }
                 }
             }
@@ -678,7 +657,9 @@ struct IdeaEditorView: View {
         try? modelContext.save()
     }
 
-    private func createSubpage() {
+    /// Backs the `/page` block: creates the real sub-page record and hands its
+    /// id back so the block can link to it.
+    private func makeSubpage() -> UUID? {
         let offset = Double(children.count % 4) * 34
         let child = Idea(
             title: "Untitled page",
@@ -689,7 +670,7 @@ struct IdeaEditorView: View {
         modelContext.insert(child)
         modelContext.insert(IdeaLink(ideaAID: idea.id, ideaBID: child.id))
         try? modelContext.save()
-        openIdea(child.id)
+        return child.id
     }
 
     private func scheduleSave() {
