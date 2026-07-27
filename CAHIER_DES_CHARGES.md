@@ -83,6 +83,7 @@ Un **orbit** : une tuile carrée arrondie (radius ~7.5px) avec un dégradé diag
 
 Le logo doit **suivre la couleur d'accent** en live (dégradé dérivé de `--accent`). Sur macOS, utiliser `LinearGradient` avec la couleur d'accent comme point de départ.
 
+
 ### 2.2 Wordmark
 
 « Orbit » en police système, **semibold**, tracking serré. Accolé au logo dans la sidebar.
