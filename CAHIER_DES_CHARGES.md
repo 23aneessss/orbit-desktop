@@ -10,6 +10,7 @@
 
 
 
+
 ## Table des matières
 
 1. [Vue d'ensemble du projet](#1-vue-densemble-du-projet)
@@ -77,6 +78,7 @@ Un **orbit** : une tuile carrée arrondie (radius ~7.5px) avec un dégradé diag
 - Une **planète** blanche (cercle central ~3.4px de rayon).
 - Un **anneau orbital** (rayon ~9.3px, trait blanc 1.8px à 92% d'opacité), incliné.
 - Un **satellite** en haut à droite (position ~22.58, 9.42) qui crée un **gap propre** dans l'anneau via un halo de même couleur que la tuile + un petit cercle blanc (2.5px).
+
 
 Le logo doit **suivre la couleur d'accent** en live (dégradé dérivé de `--accent`). Sur macOS, utiliser `LinearGradient` avec la couleur d'accent comme point de départ.
 
