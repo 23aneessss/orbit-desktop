@@ -298,6 +298,7 @@ struct AppShellView: View {
         .background(OrbitTheme.canvas(scheme))
     }
 
+
     @ViewBuilder private var content: some View {
         switch selection {
         case .home: HomeView(name: displayName, navigate: { selection = $0 })
