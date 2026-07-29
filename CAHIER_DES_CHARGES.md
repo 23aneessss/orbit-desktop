@@ -255,6 +255,7 @@ Calme et spacieuse : contenu max-w ~1152px (max-w-6xl), padding 32px, gap 16–2
 
 
 
+
 ### 3.1 Architecture recommandée (macOS)
 
 ```
