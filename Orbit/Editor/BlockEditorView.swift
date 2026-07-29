@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 
 /// A Notion-style block editor over a plain markdown string.
@@ -44,6 +45,13 @@ struct BlockEditorView: View {
     /// Last string this view wrote out, so an echo of our own edit coming back
     /// through the binding does not reparse and stomp the caret.
     @State private var lastEmitted: String?
+
+    /// Notion-style whole-block selection. `anchor`/`cursor` are the ends of a
+    /// keyboard range; `selected` is the set that renders highlighted.
+    @State private var selected: Set<UUID> = []
+    @State private var selAnchor: UUID?
+    @State private var selCursor: UUID?
+    private var blockSelecting: Bool { !selected.isEmpty }
 
     private var numbering: [UUID: Int] { BlockEditorView.displayNumbers(blocks) }
 
@@ -97,6 +105,11 @@ struct BlockEditorView: View {
                     value: [block.id: proxy.frame(in: .named(Self.space))]
                 )
             }
+        }
+        .background(alignment: .leading) {
+            RoundedRectangle(cornerRadius: 6)
+                .fill(OrbitTheme.accent.opacity(scheme == .dark ? 0.20 : 0.13))
+                .opacity(selected.contains(block.id) ? 1 : 0)
         }
         .contentShape(Rectangle())
         .onHover { hovering in
@@ -415,6 +428,7 @@ struct BlockEditorView: View {
                 text: block.text,
                 checked: block.checked,
                 isMenuOpen: slashTarget == block.id,
+                blockSelecting: blockSelecting,
                 accent: OrbitTheme.accent,
                 scheme: scheme,
                 height: heightBinding(for: block.id),
@@ -569,7 +583,19 @@ struct BlockEditorView: View {
     private func intents(for id: UUID) -> BlockIntents {
         var intents = BlockIntents()
 
+        intents.selectThisBlock = { if selected.isEmpty { selectBlocks([id], anchor: id, cursor: id) } }
+        intents.selectAllBlocks = {
+            guard !blocks.isEmpty else { return }
+            selectBlocks(Set(blocks.map(\.id)), anchor: blocks.first?.id, cursor: blocks.last?.id)
+        }
+        intents.moveBlockSelection = { down in moveSelection(down: down) }
+        intents.extendBlockSelection = { down in extendSelection(down: down) }
+        intents.copyBlocks = { copySelected() }
+        intents.deleteBlocks = { deleteSelected() }
+        intents.clearBlockSelection = { clearSelection() }
+
         intents.textChanged = { newText in
+            if !selected.isEmpty { clearSelection() }
             guard let index = blocks.firstIndex(where: { $0.id == id }) else { return }
 
             // Markdown shortcut: "# " and friends transform the block in place.
@@ -811,6 +837,50 @@ struct BlockEditorView: View {
     }
 
     // MARK: - Load / commit
+
+    // MARK: - Block selection
+
+    private func selectBlocks(_ set: Set<UUID>, anchor: UUID?, cursor: UUID?) {
+        selected = set; selAnchor = anchor; selCursor = cursor
+    }
+
+    private func clearSelection() {
+        guard !selected.isEmpty else { return }
+        selected = []; selAnchor = nil; selCursor = nil
+    }
+
+    private func moveSelection(down: Bool) {
+        guard let cursor = selCursor, let i = blocks.firstIndex(where: { $0.id == cursor }) else { return }
+        let j = down ? min(i + 1, blocks.count - 1) : max(i - 1, 0)
+        let id = blocks[j].id
+        selectBlocks([id], anchor: id, cursor: id)
+    }
+
+    private func extendSelection(down: Bool) {
+        guard let anchor = selAnchor, let ai = blocks.firstIndex(where: { $0.id == anchor }),
+              let cursor = selCursor, let ci = blocks.firstIndex(where: { $0.id == cursor }) else { return }
+        let nj = down ? min(ci + 1, blocks.count - 1) : max(ci - 1, 0)
+        selCursor = blocks[nj].id
+        let lo = min(ai, nj), hi = max(ai, nj)
+        selected = Set(blocks[lo...hi].map(\.id))
+    }
+
+    private func copySelected() {
+        let chosen = blocks.filter { selected.contains($0.id) }
+        guard !chosen.isEmpty else { return }
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(BlockDocument.serialize(chosen), forType: .string)
+    }
+
+    private func deleteSelected() {
+        guard !selected.isEmpty else { return }
+        let firstIdx = blocks.firstIndex { selected.contains($0.id) } ?? 0
+        let survivors = blocks.filter { !selected.contains($0.id) }
+        blocks = survivors.isEmpty ? [Block()] : survivors
+        clearSelection()
+        commit()
+        focus.focus(blocks[min(firstIdx, blocks.count - 1)].id, offset: 0)
+    }
 
     private func loadIfNeeded() {
         guard blocks.isEmpty else { return }

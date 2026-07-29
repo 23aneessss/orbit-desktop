@@ -253,6 +253,7 @@ Calme et spacieuse : contenu max-w ~1152px (max-w-6xl), padding 32px, gap 16–2
 | IDs | `crypto.randomUUID()` | `UUID()` |
 | JSON tags | `JSON.stringify` / parse | `JSONEncoder` / `JSONDecoder` |
 
+
 ### 3.1 Architecture recommandée (macOS)
 
 ```

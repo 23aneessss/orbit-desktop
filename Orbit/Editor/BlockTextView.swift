@@ -102,6 +102,19 @@ struct BlockIntents {
     /// Arrow / Return while the slash menu owns the keyboard.
     var menuMove: (_ down: Bool) -> Void = { _ in }
     var menuCommit: () -> Void = {}
+
+    // Block-level selection (Notion "select whole blocks" mode).
+    /// Esc from a caret selects the current block.
+    var selectThisBlock: () -> Void = {}
+    /// Cmd-A once selects the block's text; a second Cmd-A selects every block.
+    var selectAllBlocks: () -> Void = {}
+    /// Plain arrow moves the single-block selection.
+    var moveBlockSelection: (_ down: Bool) -> Void = { _ in }
+    /// Shift-arrow grows/shrinks the selected range.
+    var extendBlockSelection: (_ down: Bool) -> Void = { _ in }
+    var copyBlocks: () -> Void = {}
+    var deleteBlocks: () -> Void = {}
+    var clearBlockSelection: () -> Void = {}
 }
 
 // MARK: - NSTextView subclass
@@ -110,9 +123,39 @@ final class BlockNSTextView: NSTextView {
     var intents = BlockIntents()
     var blockKind: BlockKind = .paragraph
     var menuIsOpen = false
+    /// True while the editor is in whole-block selection mode; this view then
+    /// routes copy / delete / arrows to the document instead of its own text.
+    var blockSelecting = false
     var onFocusChange: (Bool) -> Void = { _ in }
 
     override var acceptsFirstResponder: Bool { true }
+
+    // Cmd-A: first press selects this block's text; once fully selected (or
+    // already in block mode) it escalates to selecting every block.
+    override func selectAll(_ sender: Any?) {
+        let length = (string as NSString).length
+        if blockSelecting || (length > 0 && selectedRange().length == length) {
+            intents.selectAllBlocks()
+        } else {
+            super.selectAll(sender)
+        }
+    }
+
+    override func copy(_ sender: Any?) {
+        if blockSelecting { intents.copyBlocks() } else { super.copy(sender) }
+    }
+
+    override func mouseDown(with event: NSEvent) {
+        if blockSelecting { intents.clearBlockSelection() }
+        super.mouseDown(with: event)
+    }
+
+    // Typing exits block mode (and swallows that one keystroke, like clearing a
+    // selection). Real replace-on-type isn't worth the complexity here.
+    override func insertText(_ insertString: Any, replacementRange: NSRange) {
+        if blockSelecting { intents.clearBlockSelection(); return }
+        super.insertText(insertString, replacementRange: replacementRange)
+    }
 
     override func becomeFirstResponder() -> Bool {
         let ok = super.becomeFirstResponder()
@@ -198,6 +241,19 @@ final class BlockNSTextView: NSTextView {
     override func pasteAsPlainText(_ sender: Any?) { paste(sender) }
 
     override func doCommand(by selector: Selector) {
+        // In block-selection mode this view drives the whole document.
+        if blockSelecting {
+            switch selector {
+            case #selector(NSResponder.moveUp(_:)): intents.moveBlockSelection(false)
+            case #selector(NSResponder.moveDown(_:)): intents.moveBlockSelection(true)
+            case #selector(NSStandardKeyBindingResponding.moveUpAndModifySelection(_:)): intents.extendBlockSelection(false)
+            case #selector(NSStandardKeyBindingResponding.moveDownAndModifySelection(_:)): intents.extendBlockSelection(true)
+            case #selector(NSResponder.deleteBackward(_:)), #selector(NSResponder.deleteForward(_:)): intents.deleteBlocks()
+            default: intents.clearBlockSelection()   // Esc, Return, Tab, anything → exit
+            }
+            return
+        }
+
         // While the slash menu is up it owns the arrows and Return.
         if menuIsOpen {
             switch selector {
@@ -264,7 +320,9 @@ final class BlockNSTextView: NSTextView {
             }
 
         case #selector(NSResponder.cancelOperation(_:)):
+            // Esc closes the slash menu if open, otherwise selects this block.
             intents.escape()
+            intents.selectThisBlock()
             return
 
         default:
@@ -307,6 +365,7 @@ struct BlockTextEditor: NSViewRepresentable {
     let text: String
     let checked: Bool
     let isMenuOpen: Bool
+    let blockSelecting: Bool
     let accent: Color
     let scheme: ColorScheme
     @Binding var height: CGFloat
@@ -341,6 +400,11 @@ struct BlockTextEditor: NSViewRepresentable {
         view.intents = intents
         view.blockKind = kind
         view.menuIsOpen = isMenuOpen
+        view.blockSelecting = blockSelecting
+        // Collapse this view's own text highlight so only the block highlight shows.
+        if blockSelecting, view.selectedRange().length > 0 {
+            view.setSelectedRange(NSRange(location: view.selectedRange().location, length: 0))
+        }
 
         let id = blockID
         view.onFocusChange = { [weak focus] active in
@@ -471,7 +535,7 @@ struct BlockTextEditor: NSViewRepresentable {
             }
 
             storage.endEditing()
-            view.insertionPointColor = NSColor(parent.accent)
+            view.insertionPointColor = parent.blockSelecting ? .clear : NSColor(parent.accent)
         }
 
         func syncHeight(_ view: BlockNSTextView) {
