@@ -251,7 +251,11 @@ struct IdeaCanvasView: View {
     private func addIdea(at screenPoint: CGPoint? = nil) {
         let screen = screenPoint ?? CGPoint(x: 520, y: 300)
         let world = CGPoint(x: (screen.x - pan.width) / zoom, y: (screen.y - pan.height) / zoom)
-        let idea = Idea(title: "Untitled", content: "", tags: selectedTags.sorted(), canvasX: world.x, canvasY: world.y, folderID: selectedFolderID)
+        let idea = Idea(
+            title: "Untitled", content: "", tags: selectedTags.sorted(),
+            canvasX: world.x, canvasY: world.y, folderID: selectedFolderID,
+            workspaceID: UUID(uuidString: currentWorkspaceRaw)
+        )
         modelContext.insert(idea); try? modelContext.save(); selectedIdeaID = idea.id
     }
 
