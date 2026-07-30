@@ -6,7 +6,7 @@ struct IdeasView: View {
     @Environment(\.colorScheme) private var scheme
     @Environment(\.orbitWidth) private var orbitWidth
     @Query(sort: \Idea.updatedAt, order: .reverse) private var storedIdeas: [Idea]
-    @Query(sort: \IdeaFolder.name) private var folders: [IdeaFolder]
+    @Query(sort: \IdeaFolder.name) private var storedFolders: [IdeaFolder]
     @Query private var settings: [AppSetting]
     @Query(sort: [SortDescriptor(\Workspace.orderIndex), SortDescriptor(\Workspace.createdAt)])
     private var workspaces: [Workspace]

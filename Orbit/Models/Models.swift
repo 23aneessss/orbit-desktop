@@ -99,11 +99,15 @@ final class IdeaFolder {
     @Attribute(.unique) var id: UUID
     var name: String
     var createdAt: Date
+    /// Folders belong to a workspace. Optional so the store migrates in place;
+    /// `nil` is adopted on launch by `WorkspaceService`.
+    var workspaceID: UUID?
 
-    init(id: UUID = UUID(), name: String, createdAt: Date = .now) {
+    init(id: UUID = UUID(), name: String, createdAt: Date = .now, workspaceID: UUID? = nil) {
         self.id = id
         self.name = name
         self.createdAt = createdAt
+        self.workspaceID = workspaceID
     }
 }
 

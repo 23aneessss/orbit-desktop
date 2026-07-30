@@ -38,10 +38,14 @@ enum WorkspaceService {
         // Fetch-and-filter rather than a predicate on an optional:
         // straightforward, and these collections are small.
         let ideas = (try? context.fetch(FetchDescriptor<Idea>())) ?? []
-        let orphans = ideas.filter { $0.workspaceID == nil }
-        for idea in orphans { idea.workspaceID = home.id }
+        let orphanIdeas = ideas.filter { $0.workspaceID == nil }
+        for idea in orphanIdeas { idea.workspaceID = home.id }
 
-        if !orphans.isEmpty || existing.isEmpty { try? context.save() }
+        let folders = (try? context.fetch(FetchDescriptor<IdeaFolder>())) ?? []
+        let orphanFolders = folders.filter { $0.workspaceID == nil }
+        for folder in orphanFolders { folder.workspaceID = home.id }
+
+        if !orphanIdeas.isEmpty || !orphanFolders.isEmpty || existing.isEmpty { try? context.save() }
         return home
     }
 
@@ -87,7 +91,12 @@ enum WorkspaceService {
     @MainActor
     static func move(ideaID: UUID, to workspaceID: UUID, context: ModelContext) {
         let ideas = (try? context.fetch(FetchDescriptor<Idea>())) ?? []
-        for idea in subtree(of: ideaID, in: ideas) { idea.workspaceID = workspaceID }
+        for idea in subtree(of: ideaID, in: ideas) {
+            idea.workspaceID = workspaceID
+            // Its folder stays behind in the old workspace, so drop the link
+            // instead of leaving a reference the new workspace cannot show.
+            idea.folderID = nil
+        }
         try? context.save()
     }
 
@@ -102,6 +111,10 @@ enum WorkspaceService {
         let ideas = (try? context.fetch(FetchDescriptor<Idea>())) ?? []
         for idea in ideas where idea.workspaceID == workspace.id {
             idea.workspaceID = fallback.id
+        }
+        let folders = (try? context.fetch(FetchDescriptor<IdeaFolder>())) ?? []
+        for folder in folders where folder.workspaceID == workspace.id {
+            folder.workspaceID = fallback.id
         }
         context.delete(workspace)
         try? context.save()
