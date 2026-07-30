@@ -120,6 +120,9 @@ final class Idea {
     var canvasY: Double?
     var parentID: UUID?
     var folderID: UUID?
+    /// Optional so the store migrates in place; `nil` means "written before
+    /// workspaces existed" and is adopted on launch by `WorkspaceService`.
+    var workspaceID: UUID?
 
     init(
         id: UUID = UUID(),
@@ -132,7 +135,8 @@ final class Idea {
         canvasX: Double? = nil,
         canvasY: Double? = nil,
         parentID: UUID? = nil,
-        folderID: UUID? = nil
+        folderID: UUID? = nil,
+        workspaceID: UUID? = nil
     ) {
         self.id = id
         self.title = title
