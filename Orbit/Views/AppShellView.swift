@@ -33,6 +33,7 @@ struct AppShellView: View {
     @Query private var settings: [AppSetting]
 
     @AppStorage("orbit:sidebar-collapsed") private var sidebarCollapsed = false
+    @AppStorage("orbit:workspace") private var workspaceID = ""
     @AppStorage("orbit:theme") private var themePreference = "system"
     @AppStorage("orbit:accent") private var accentHex = "#8B5CF6"
     @State private var selection: OrbitSection = .home
