@@ -51,6 +51,27 @@ enum BlockTypography {
     }
 }
 
+// MARK: - Resolving a drag position to a block
+
+/// Weak so a deleted block's text view neither leaks nor answers hit tests.
+final class WeakTextView {
+    weak var view: BlockNSTextView?
+    init(_ view: BlockNSTextView) { self.view = view }
+}
+
+enum BlockHitTest {
+    /// Which block owns a given window-space `y`.
+    ///
+    /// Frames are window coordinates, so **up is a larger y**. Rows have padding
+    /// between them; a `y` landing in one of those gaps (or past either end of
+    /// the document) resolves to the nearest block rather than falling through,
+    /// which is what made an upward drag jump to the wrong end.
+    static func blockID(atY y: CGFloat, in frames: [(id: UUID, rect: NSRect)]) -> UUID? {
+        if let hit = frames.first(where: { y >= $0.rect.minY && y <= $0.rect.maxY }) { return hit.id }
+        return frames.min(by: { abs($0.rect.midY - y) < abs($1.rect.midY - y) })?.id
+    }
+}
+
 // MARK: - Focus coordination
 
 /// Blocks are separate text views, so "where is the caret" has to live above
@@ -67,6 +88,19 @@ final class BlockFocus: ObservableObject {
     @Published private(set) var request: Request?
     @Published var activeID: UUID?
     private var token = 0
+
+    /// Live text views, used to resolve a drag to a block. Deliberately not
+    /// `@Published`: it is geometry bookkeeping, not state anyone renders from.
+    var textViews: [UUID: WeakTextView] = [:]
+
+    /// Frames are read on demand so scrolling mid-drag can't make them stale.
+    func blockID(atWindowY y: CGFloat) -> UUID? {
+        let frames = textViews.compactMap { id, box -> (id: UUID, rect: NSRect)? in
+            guard let view = box.view, view.window != nil else { return nil }
+            return (id, view.convert(view.bounds, to: nil))
+        }
+        return BlockHitTest.blockID(atY: y, in: frames)
+    }
 
     func focus(_ id: UUID, offset: Int = .max) {
         token += 1
@@ -128,6 +162,8 @@ final class BlockNSTextView: NSTextView {
     var blockKind: BlockKind = .paragraph
     /// Which block this view renders, so a drag can name the block it lands on.
     var blockID = UUID()
+    /// Window-space y → block, supplied by the SwiftUI layer.
+    var resolveBlock: (CGFloat) -> UUID? = { _ in nil }
     var menuIsOpen = false
     /// True while the editor is in whole-block selection mode; this view then
     /// routes copy / delete / arrows to the document instead of its own text.
@@ -180,11 +216,8 @@ final class BlockNSTextView: NSTextView {
             }
 
             if crossed {
-                // Hit-testing beats caching frames: it stays correct while the
-                // page scrolls under the pointer.
-                if let root = window.contentView,
-                   let hit = root.hitTest(root.convert(next.locationInWindow, from: nil)) as? BlockNSTextView {
-                    intents.dragSelectTo(hit.blockID)
+                if let target = resolveBlock(next.locationInWindow.y) {
+                    intents.dragSelectTo(target)
                 }
             } else {
                 let index = characterIndexForInsertion(at: local)
@@ -445,6 +478,10 @@ struct BlockTextEditor: NSViewRepresentable {
         view.blockKind = kind
         view.blockID = blockID
         view.menuIsOpen = isMenuOpen
+        focus.textViews[blockID] = WeakTextView(view)
+        view.resolveBlock = { [weak focus] y in
+            MainActor.assumeIsolated { focus?.blockID(atWindowY: y) }
+        }
         view.blockSelecting = blockSelecting
         // Collapse this view's own text highlight so only the block highlight shows.
         if blockSelecting, view.selectedRange().length > 0 {
