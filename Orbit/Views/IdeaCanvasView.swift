@@ -11,7 +11,15 @@ struct IdeaCanvasView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.colorScheme) private var scheme
     @Environment(\.orbitWidth) private var orbitWidth
-    @Query(sort: \Idea.createdAt) private var ideas: [Idea]
+    @Query(sort: \Idea.createdAt) private var storedIdeas: [Idea]
+    @AppStorage("orbit:workspace") private var currentWorkspaceRaw = ""
+
+    /// One canvas per workspace. No selection shows everything rather than
+    /// looking like the canvas lost its cards.
+    private var ideas: [Idea] {
+        guard let id = UUID(uuidString: currentWorkspaceRaw) else { return storedIdeas }
+        return storedIdeas.filter { $0.workspaceID == id }
+    }
     @Query private var links: [IdeaLink]
     @Query(sort: \IdeaFolder.name) private var folders: [IdeaFolder]
 
