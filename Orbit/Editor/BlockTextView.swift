@@ -6,11 +6,11 @@ import SwiftUI
 enum BlockTypography {
     static func font(for kind: BlockKind) -> NSFont {
         switch kind {
-        case .heading1: .systemFont(ofSize: 29, weight: .bold)
-        case .heading2: .systemFont(ofSize: 23, weight: .bold)
-        case .heading3: .systemFont(ofSize: 18.5, weight: .semibold)
-        case .code: .monospacedSystemFont(ofSize: 13, weight: .regular)
-        default: .systemFont(ofSize: 15.5, weight: .regular)
+        case .heading1: .systemFont(ofSize: 32, weight: .bold)
+        case .heading2: .systemFont(ofSize: 25.5, weight: .bold)
+        case .heading3: .systemFont(ofSize: 20.5, weight: .semibold)
+        case .code: .monospacedSystemFont(ofSize: 14.5, weight: .regular)
+        default: .systemFont(ofSize: 17, weight: .regular)
         }
     }
 
@@ -24,9 +24,9 @@ enum BlockTypography {
 
     static func lineSpacing(for kind: BlockKind) -> CGFloat {
         switch kind {
-        case .heading1, .heading2, .heading3: 2
-        case .code: 3
-        default: 5
+        case .heading1, .heading2, .heading3: 2.5
+        case .code: 3.5
+        default: 6
         }
     }
 
