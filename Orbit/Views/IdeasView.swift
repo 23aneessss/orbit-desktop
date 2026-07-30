@@ -398,6 +398,14 @@ private struct IdeaBrowserCard: View {
                                 }
                             }
                         }
+                        if workspaces.count > 1 {
+                            Menu("Move to workspace") {
+                                ForEach(workspaces) { workspace in
+                                    Button("\(workspace.icon)  \(workspace.name)") { moveToWorkspace(workspace.id) }
+                                        .disabled(idea.workspaceID == workspace.id)
+                                }
+                            }
+                        }
                         Divider()
                         Button("Delete", systemImage: "trash", role: .destructive, action: delete)
                     } label: {
