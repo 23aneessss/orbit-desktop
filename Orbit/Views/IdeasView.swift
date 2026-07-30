@@ -371,6 +371,9 @@ private struct IdeaBrowserCard: View {
     let open: () -> Void
     let delete: () -> Void
     let moveToFolder: (UUID?) -> Void
+    let workspaces: [Workspace]
+    /// Sends this page — and its sub-pages — to another workspace.
+    let moveToWorkspace: (UUID) -> Void
 
     var body: some View {
         Button(action: open) {
