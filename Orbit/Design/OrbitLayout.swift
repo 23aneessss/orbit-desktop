@@ -47,7 +47,7 @@ enum OrbitWidthClass: Int, Comparable {
 
     /// The block editor's hover gutter. Still usable when narrow, just tighter.
     var gutterWidth: CGFloat {
-        isCompact ? 26 : 42
+        isCompact ? 34 : 58
     }
 
     /// Section headers stack their controls under the title once the row would
