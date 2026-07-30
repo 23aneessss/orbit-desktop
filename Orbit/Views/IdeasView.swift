@@ -764,7 +764,8 @@ struct IdeaEditorView: View {
             title: "Untitled page",
             canvasX: idea.canvasX.map { $0 + 280 + offset },
             canvasY: idea.canvasY.map { $0 + 150 + offset },
-            parentID: idea.id
+            parentID: idea.id,
+            workspaceID: idea.workspaceID   // a sub-page lives where its parent lives
         )
         modelContext.insert(child)
         modelContext.insert(IdeaLink(ideaAID: idea.id, ideaBID: child.id))
