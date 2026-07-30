@@ -270,7 +270,11 @@ struct IdeasView: View {
                             icon: PageIcon.read(idea.id, from: settings),
                             open: { selectedIdeaID = idea.id },
                             delete: { delete(idea) },
-                            moveToFolder: { moveIdea(idea.id, to: $0) }
+                            moveToFolder: { moveIdea(idea.id, to: $0) },
+                            workspaces: workspaces,
+                            moveToWorkspace: { target in
+                                WorkspaceService.move(ideaID: idea.id, to: target, context: modelContext)
+                            }
                         )
                         .draggable(idea.id.uuidString)
                     }
