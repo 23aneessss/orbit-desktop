@@ -5,9 +5,22 @@ struct IdeasView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.colorScheme) private var scheme
     @Environment(\.orbitWidth) private var orbitWidth
-    @Query(sort: \Idea.updatedAt, order: .reverse) private var ideas: [Idea]
+    @Query(sort: \Idea.updatedAt, order: .reverse) private var storedIdeas: [Idea]
     @Query(sort: \IdeaFolder.name) private var folders: [IdeaFolder]
     @Query private var settings: [AppSetting]
+    @Query(sort: [SortDescriptor(\Workspace.orderIndex), SortDescriptor(\Workspace.createdAt)])
+    private var workspaces: [Workspace]
+
+    @AppStorage("orbit:workspace") private var currentWorkspaceRaw = ""
+
+    private var currentWorkspaceID: UUID? { UUID(uuidString: currentWorkspaceRaw) }
+
+    /// Scoped to the selected workspace. With no selection we deliberately show
+    /// everything rather than risk hiding notes.
+    private var ideas: [Idea] {
+        guard let currentWorkspaceID else { return storedIdeas }
+        return storedIdeas.filter { $0.workspaceID == currentWorkspaceID }
+    }
     @Binding var requestedIdeaID: UUID?
 
     @State private var query = ""
