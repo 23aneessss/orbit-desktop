@@ -183,6 +183,11 @@ struct AppShellView: View {
                 sidebarItem(section, rail: rail)
             }
 
+            WorkspaceSidebar(rail: rail) {
+                selection = .ideas
+                setOverlay(false)
+            }
+
             Spacer(minLength: 8)
             sidebarItem(.settings, rail: rail)
 
