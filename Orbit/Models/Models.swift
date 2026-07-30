@@ -149,6 +149,7 @@ final class Idea {
         self.canvasY = canvasY
         self.parentID = parentID
         self.folderID = folderID
+        self.workspaceID = workspaceID
     }
 
     var tags: [String] {
