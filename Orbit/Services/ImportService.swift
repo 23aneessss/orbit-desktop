@@ -67,6 +67,13 @@ enum ImportService {
                 guard let habit = habitsByID[item.habitId] else { throw ImportError.missingRelationship("habit log") }
                 context.insert(HabitLog(id: item.id, dateKey: item.date, habit: habit, createdAt: item.createdAt ?? .now))
             }
+            let workspaceIDs = Set((backup.workspaces ?? []).map(\.id))
+            for item in backup.workspaces ?? [] {
+                context.insert(Workspace(
+                    id: item.id, name: item.name, icon: item.icon ?? "🗂",
+                    orderIndex: item.orderIdx ?? 0, createdAt: item.createdAt ?? .now
+                ))
+            }
             let folderIDs = Set((backup.ideaFolders ?? []).map(\.id))
             for item in backup.ideaFolders ?? [] {
                 context.insert(IdeaFolder(id: item.id, name: item.name, createdAt: item.createdAt ?? .now))
@@ -153,6 +160,7 @@ private struct Backup: Decodable {
     let ideas: [IdeaItem]
     let ideaLinks: [IdeaLinkItem]
     let ideaFolders: [IdeaFolderItem]?
+    let workspaces: [WorkspaceItem]?
     let tasks: [TaskItem]
     let taskSteps: [TaskStepItem]
     let stepLinks: [StepLinkItem]
@@ -165,7 +173,9 @@ private struct Backup: Decodable {
 
 private struct HabitItem: Decodable { let id: UUID; let name, icon, color: String; let targetPerDay: Int?; let targetPerWeek: Int; let createdAt: Date? }
 private struct HabitLogItem: Decodable { let id, habitId: UUID; let date: String; let createdAt: Date? }
-private struct IdeaItem: Decodable { let id: UUID; let title, content: String; let tags: [String]; let pinned: Bool; let parentId: UUID?; let folderId: UUID?; let canvasX, canvasY: Double?; let createdAt, updatedAt: Date? }
+private struct IdeaItem: Decodable { let id: UUID; let title, content: String; let tags: [String]; let pinned: Bool; let parentId: UUID?; let folderId: UUID?; let workspaceId: UUID?; let canvasX, canvasY: Double?; let createdAt, updatedAt: Date? }
+/// Optional so backups written before workspaces existed still restore.
+private struct WorkspaceItem: Decodable { let id: UUID; let name: String; let icon: String?; let orderIdx: Int?; let createdAt: Date? }
 private struct IdeaLinkItem: Decodable { let id, ideaAId, ideaBId: UUID; let createdAt: Date? }
 private struct IdeaFolderItem: Decodable { let id: UUID; let name: String; let createdAt: Date? }
 private struct TaskItem: Decodable { let id: UUID; let title, note: String; let done: Bool; let canvasX, canvasY: Double?; let createdAt, completedAt: Date? }
