@@ -75,6 +75,25 @@ final class HabitLog {
     }
 }
 
+/// A top-level container for ideas — each workspace has its own Ideas list and
+/// its own canvas. Folders still live *inside* a workspace.
+@Model
+final class Workspace {
+    @Attribute(.unique) var id: UUID
+    var name: String
+    var icon: String
+    var orderIndex: Int
+    var createdAt: Date
+
+    init(id: UUID = UUID(), name: String, icon: String = "🗂", orderIndex: Int = 0, createdAt: Date = .now) {
+        self.id = id
+        self.name = name
+        self.icon = icon
+        self.orderIndex = orderIndex
+        self.createdAt = createdAt
+    }
+}
+
 @Model
 final class IdeaFolder {
     @Attribute(.unique) var id: UUID
