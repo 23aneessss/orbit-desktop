@@ -443,6 +443,7 @@ struct BlockTextEditor: NSViewRepresentable {
         context.coordinator.parent = self
         view.intents = intents
         view.blockKind = kind
+        view.blockID = blockID
         view.menuIsOpen = isMenuOpen
         view.blockSelecting = blockSelecting
         // Collapse this view's own text highlight so only the block highlight shows.
