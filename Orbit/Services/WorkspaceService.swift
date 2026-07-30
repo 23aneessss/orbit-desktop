@@ -61,10 +61,24 @@ enum WorkspaceService {
     }
 
     @MainActor
-    static func rename(_ workspace: Workspace, to name: String, context: ModelContext) {
+    static func update(_ workspace: Workspace, name: String, icon: String, context: ModelContext) {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return }
-        workspace.name = trimmed
+        if !trimmed.isEmpty { workspace.name = trimmed }
+        if !icon.isEmpty { workspace.icon = icon }
+        try? context.save()
+    }
+
+    /// Drops the dragged workspace at the target's position and renumbers the
+    /// whole list, so `orderIndex` stays contiguous however often it is moved.
+    @MainActor
+    static func reorder(_ draggedID: UUID, toIndexOf targetID: UUID, context: ModelContext) {
+        var ordered = all(in: context)
+        guard let from = ordered.firstIndex(where: { $0.id == draggedID }),
+              let to = ordered.firstIndex(where: { $0.id == targetID }),
+              from != to else { return }
+
+        ordered.insert(ordered.remove(at: from), at: to)
+        for (index, workspace) in ordered.enumerated() { workspace.orderIndex = index }
         try? context.save()
     }
 

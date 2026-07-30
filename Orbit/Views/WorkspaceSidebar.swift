@@ -17,10 +17,15 @@ struct WorkspaceSidebar: View {
     /// Jump to the Ideas screen when a workspace is picked.
     let openIdeas: () -> Void
 
-    @State private var renaming: Workspace?
-    @State private var draftName = ""
-    @State private var addingName = ""
-    @State private var isAdding = false
+    /// One sheet drives both creating and editing; `workspace == nil` means new.
+    private struct Draft: Identifiable {
+        let id = UUID()
+        let workspace: Workspace?
+        let name: String
+        let icon: String
+    }
+
+    @State private var draft: Draft?
 
     var body: some View {
         VStack(spacing: 1) {
@@ -41,24 +46,19 @@ struct WorkspaceSidebar: View {
 
             addRow
         }
-        .alert("Rename workspace", isPresented: Binding(get: { renaming != nil }, set: { if !$0 { renaming = nil } })) {
-            TextField("Name", text: $draftName)
-            Button("Cancel", role: .cancel) { renaming = nil }
-            Button("Rename") {
-                if let workspace = renaming {
-                    WorkspaceService.rename(workspace, to: draftName, context: modelContext)
+        .sheet(item: $draft) { draft in
+            WorkspaceEditorSheet(
+                title: draft.workspace == nil ? "New workspace" : "Edit workspace",
+                name: draft.name,
+                icon: draft.icon
+            ) { name, icon in
+                if let workspace = draft.workspace {
+                    WorkspaceService.update(workspace, name: name, icon: icon, context: modelContext)
+                } else {
+                    let created = WorkspaceService.create(name: name, icon: icon, context: modelContext)
+                    currentID = created.id.uuidString
+                    openIdeas()
                 }
-                renaming = nil
-            }
-        }
-        .alert("New workspace", isPresented: $isAdding) {
-            TextField("Name", text: $addingName)
-            Button("Cancel", role: .cancel) { addingName = "" }
-            Button("Create") {
-                let created = WorkspaceService.create(name: addingName, icon: "🗂", context: modelContext)
-                currentID = created.id.uuidString
-                addingName = ""
-                openIdeas()
             }
         }
     }
@@ -88,10 +88,22 @@ struct WorkspaceSidebar: View {
         .buttonStyle(.plain)
         .padding(.horizontal, rail ? 9 : 16)
         .help(workspace.name)
+        .draggable(workspace.id.uuidString)
+        .dropDestination(for: String.self) { items, _ in
+            guard let raw = items.first, let dragged = UUID(uuidString: raw), dragged != workspace.id else { return false }
+
+            // Ideas are draggable with the same payload shape, so the id tells us
+            // which gesture this is: reorder a workspace, or rehome an idea.
+            if workspaces.contains(where: { $0.id == dragged }) {
+                WorkspaceService.reorder(dragged, toIndexOf: workspace.id, context: modelContext)
+            } else {
+                WorkspaceService.move(ideaID: dragged, to: workspace.id, context: modelContext)
+            }
+            return true
+        }
         .contextMenu {
-            Button("Rename", systemImage: "pencil") {
-                draftName = workspace.name
-                renaming = workspace
+            Button("Rename or change icon", systemImage: "pencil") {
+                draft = Draft(workspace: workspace, name: workspace.name, icon: workspace.icon)
             }
             Divider()
             // Disabled on the last workspace — the service also refuses it, so
@@ -107,7 +119,7 @@ struct WorkspaceSidebar: View {
     }
 
     private var addRow: some View {
-        Button { isAdding = true } label: {
+        Button { draft = Draft(workspace: nil, name: "", icon: "🗂") } label: {
             HStack(spacing: 11) {
                 Image(systemName: "plus").font(.system(size: 13, weight: .medium)).frame(width: 20)
                 if !rail {
@@ -122,5 +134,62 @@ struct WorkspaceSidebar: View {
         .buttonStyle(.plain)
         .padding(.horizontal, rail ? 9 : 16)
         .help("Create a workspace")
+    }
+}
+
+/// Name + icon, for both creating and editing. The icon grid is the same
+/// `PageIconPicker` the page icons use.
+private struct WorkspaceEditorSheet: View {
+    @Environment(\.colorScheme) private var scheme
+    @Environment(\.dismiss) private var dismiss
+
+    let title: String
+    @State private var name: String
+    @State private var icon: String
+    @State private var pickingIcon = false
+    let save: (String, String) -> Void
+
+    init(title: String, name: String, icon: String, save: @escaping (String, String) -> Void) {
+        self.title = title
+        _name = State(initialValue: name)
+        _icon = State(initialValue: icon)
+        self.save = save
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            Text(title).font(.system(size: 15, weight: .semibold))
+
+            HStack(spacing: 10) {
+                Button { pickingIcon = true } label: {
+                    Text(icon)
+                        .font(.system(size: 21))
+                        .frame(width: 42, height: 42)
+                        .background(OrbitTheme.sunken(scheme), in: RoundedRectangle(cornerRadius: 9))
+                }
+                .buttonStyle(.plain)
+                .help("Choose an icon")
+                .popover(isPresented: $pickingIcon, arrowEdge: .bottom) {
+                    PageIconPicker(current: icon) { chosen in icon = chosen ?? "🗂" }
+                }
+
+                TextField("Workspace name", text: $name)
+                    .textFieldStyle(.roundedBorder)
+                    .onSubmit(commit)
+            }
+
+            HStack(spacing: 10) {
+                Spacer()
+                Button("Cancel") { dismiss() }
+                Button("Save", action: commit).keyboardShortcut(.defaultAction)
+            }
+        }
+        .padding(20)
+        .frame(width: 340)
+    }
+
+    private func commit() {
+        save(name, icon)
+        dismiss()
     }
 }
