@@ -80,7 +80,10 @@ enum ImportService {
             }
             for item in backup.ideas {
                 let folderID = item.folderId.flatMap { folderIDs.contains($0) ? $0 : nil }
-                context.insert(Idea(id: item.id, title: item.title, content: item.content, tags: item.tags, pinned: item.pinned, createdAt: item.createdAt ?? .now, updatedAt: item.updatedAt ?? .now, canvasX: item.canvasX, canvasY: item.canvasY, parentID: item.parentId, folderID: folderID))
+                // An unknown workspace id becomes nil, and launch adopts the idea
+                // rather than leaving it invisible.
+                let workspaceID = item.workspaceId.flatMap { workspaceIDs.contains($0) ? $0 : nil }
+                context.insert(Idea(id: item.id, title: item.title, content: item.content, tags: item.tags, pinned: item.pinned, createdAt: item.createdAt ?? .now, updatedAt: item.updatedAt ?? .now, canvasX: item.canvasX, canvasY: item.canvasY, parentID: item.parentId, folderID: folderID, workspaceID: workspaceID))
             }
             for item in backup.ideaLinks {
                 context.insert(IdeaLink(id: item.id, ideaAID: item.ideaAId, ideaBID: item.ideaBId, createdAt: item.createdAt ?? .now))
@@ -138,6 +141,7 @@ enum ImportService {
     private static func eraseCurrentContent(in context: ModelContext) throws {
         try context.delete(model: HabitLog.self)
         try context.delete(model: Habit.self)
+        try context.delete(model: Workspace.self)
         try context.delete(model: IdeaLink.self)
         try context.delete(model: Idea.self)
         try context.delete(model: IdeaFolder.self)
