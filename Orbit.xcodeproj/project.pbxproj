@@ -19,6 +19,7 @@
 		33335E4F882F977DFA66C647 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 20936134E6681D18358932B7 /* Assets.xcassets */; };
 		45B474D5C88C9C629F52C2BE /* BlockDocumentTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 78AE3CAEB105490C50CE892A /* BlockDocumentTests.swift */; };
 		46F48D553FD3ABE560B624F5 /* OrbitTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66D0C8FB4C74F5AC31C6D25F /* OrbitTheme.swift */; };
+		53A3816EC86E5C28C3D0735D /* BlockHitTestTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF7556445D7AB30238181B6A /* BlockHitTestTests.swift */; };
 		567604D291F59AED5CA123E8 /* TaskCompletionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 528B3CA5A15B87580BF57635 /* TaskCompletionService.swift */; };
 		7C8B5DFF0911F41E6BF9FA4D /* PeopleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BBF9172C28578B7EBBFC4A3 /* PeopleView.swift */; };
 		941F215F7CC18B3AE05CA4D0 /* BlockDocument.swift in Sources */ = {isa = PBXBuildFile; fileRef = EFC621EF0E10C8C21C7D49FB /* BlockDocument.swift */; };
@@ -76,6 +77,7 @@
 		E4EE5D477AB5624DD9F40103 /* ImportServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportServiceTests.swift; sourceTree = "<group>"; };
 		EFC621EF0E10C8C21C7D49FB /* BlockDocument.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlockDocument.swift; sourceTree = "<group>"; };
 		F5FBC4BA4DFBF2A4D89D2B94 /* PageIcon.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PageIcon.swift; sourceTree = "<group>"; };
+		FF7556445D7AB30238181B6A /* BlockHitTestTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlockHitTestTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -128,6 +130,7 @@
 			isa = PBXGroup;
 			children = (
 				78AE3CAEB105490C50CE892A /* BlockDocumentTests.swift */,
+				FF7556445D7AB30238181B6A /* BlockHitTestTests.swift */,
 				E4EE5D477AB5624DD9F40103 /* ImportServiceTests.swift */,
 				02F7E45F3FFC1304FBF4D383 /* TaskCompletionServiceTests.swift */,
 			);
@@ -314,6 +317,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				45B474D5C88C9C629F52C2BE /* BlockDocumentTests.swift in Sources */,
+				53A3816EC86E5C28C3D0735D /* BlockHitTestTests.swift in Sources */,
 				1422A0758899739CFAF25423 /* ImportServiceTests.swift in Sources */,
 				C84CD846CA563A5CF677B913 /* TaskCompletionServiceTests.swift in Sources */,
 			);
