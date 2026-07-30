@@ -151,15 +151,16 @@ struct BlockEditorView: View {
 
     @ViewBuilder
     private func gutter(for block: Block, at index: Int, visible: Bool) -> some View {
-        HStack(spacing: 1) {
+        HStack(spacing: 2) {
             Button { insertBlock(below: block.id) } label: {
                 Image(systemName: "plus")
-                    .font(.system(size: 12, weight: .medium))
-                    .frame(width: 20, height: 22)
+                    .font(.system(size: 15, weight: .medium))
+                    .frame(width: 26, height: 26)
+                    .background(OrbitTheme.sunken(scheme).opacity(0.9), in: RoundedRectangle(cornerRadius: 5))
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .foregroundStyle(OrbitTheme.ink3(scheme))
+            .foregroundStyle(OrbitTheme.ink2(scheme))
             .help("Click to add a block below")
 
             handle(for: block, at: index)
@@ -182,12 +183,21 @@ struct BlockEditorView: View {
     /// behave like Notion's.
     @ViewBuilder
     private func handle(for block: Block, at index: Int) -> some View {
-        Image(systemName: "line.3.horizontal")
-            .font(.system(size: 11, weight: .medium))
-            .frame(width: 18, height: 22)
-            .contentShape(Rectangle())
-            .foregroundStyle(OrbitTheme.ink3(scheme))
-            .help("Drag to move, or click for actions")
+        // Notion's grip: six dots in two columns. No SF Symbol matches it, and
+        // the hamburger it replaced read as a menu rather than a handle.
+        VStack(spacing: 3) {
+            ForEach(0..<3, id: \.self) { _ in
+                HStack(spacing: 3) {
+                    Circle().frame(width: 3, height: 3)
+                    Circle().frame(width: 3, height: 3)
+                }
+            }
+        }
+        .frame(width: 22, height: 26)
+        .background(OrbitTheme.sunken(scheme).opacity(0.9), in: RoundedRectangle(cornerRadius: 5))
+        .contentShape(Rectangle())
+        .foregroundStyle(OrbitTheme.ink2(scheme))
+        .help("Drag to move, or click for actions")
             .onTapGesture { menuBlockID = block.id }
             .gesture(
                 DragGesture(minimumDistance: 4, coordinateSpace: .named(Self.space))
