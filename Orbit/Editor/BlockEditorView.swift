@@ -603,6 +603,14 @@ struct BlockEditorView: View {
         intents.copyBlocks = { copySelected() }
         intents.deleteBlocks = { deleteSelected() }
         intents.clearBlockSelection = { clearSelection() }
+        intents.dragSelectBegan = { selectBlocks([id], anchor: id, cursor: id) }
+        intents.dragSelectTo = { target in
+            guard let anchor = selAnchor,
+                  let ai = blocks.firstIndex(where: { $0.id == anchor }),
+                  let ti = blocks.firstIndex(where: { $0.id == target }) else { return }
+            selCursor = target
+            selected = Set(blocks[min(ai, ti)...max(ai, ti)].map(\.id))
+        }
 
         intents.textChanged = { newText in
             if !selected.isEmpty { clearSelection() }
