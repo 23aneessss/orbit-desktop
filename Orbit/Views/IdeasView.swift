@@ -471,6 +471,7 @@ struct IdeaEditorView: View {
     @State private var saveState = "Saved"
     @State private var showingRelations = false
     @State private var showingIconPicker = false
+    @State private var hoveredCrumbID: UUID?
     @State private var autosaveTask: Task<Void, Never>?
 
     private var outgoingLinks: [IdeaLink] { allLinks.filter { $0.sourceID == idea.id } }
@@ -538,42 +539,72 @@ struct IdeaEditorView: View {
         .padding(.horizontal, orbitWidth.isCompact ? 14 : 28).frame(height: 54)
     }
 
+    /// Notion's trail: `icon Name / icon Name / **Current page**`.
+    ///
+    /// The old version buried the path — every crumb looked alike, the *current*
+    /// page was the faintest item of all, and an accent-coloured "Move to top
+    /// level" button sat in the middle of the trail. Now ancestors are muted and
+    /// hoverable, the current page is the strongest, and detaching moved to its
+    /// right-click menu so the path reads as a path.
     @ViewBuilder private var pageBreadcrumb: some View {
         let trail = IdeaHierarchy.ancestors(of: idea, in: allIdeas)
         if !trail.isEmpty {
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 6) {
+                HStack(spacing: 2) {
                     ForEach(trail) { ancestor in
-                        Button { openIdea(ancestor.id) } label: {
-                            HStack(spacing: 5) {
-                                crumbIcon(for: ancestor.id)
-                                Text(ancestor.title.isEmpty ? "Untitled" : ancestor.title).lineLimit(1)
-                            }
-                            .contentShape(Rectangle())
+                        crumb(id: ancestor.id, title: ancestor.title, isCurrent: false) {
+                            openIdea(ancestor.id)
                         }
-                        .buttonStyle(.plain)
-                        .foregroundStyle(OrbitTheme.ink2(scheme))
-
-                        Image(systemName: "chevron.right")
-                            .font(.system(size: 8, weight: .semibold))
-                            .foregroundStyle(OrbitTheme.ink3(scheme))
+                        Text("/")
+                            .font(.system(size: 12))
+                            .foregroundStyle(OrbitTheme.ink3(scheme).opacity(0.55))
                     }
 
-                    HStack(spacing: 5) {
-                        crumbIcon(for: idea.id)
-                        Text(idea.title.isEmpty ? "Untitled page" : idea.title).lineLimit(1)
-                    }
-                    .foregroundStyle(OrbitTheme.ink3(scheme))
-
-                    Button("Move to top level") { idea.parentID = nil; scheduleSave() }
-                        .buttonStyle(.plain).font(.system(size: 10.5)).foregroundStyle(OrbitTheme.accent)
-                        .padding(.leading, 4)
-                        .help("Detach this page from its parent idea")
+                    crumb(id: idea.id, title: idea.title, isCurrent: true, action: nil)
+                        .contextMenu {
+                            Button("Move to top level", systemImage: "arrow.up.left") {
+                                idea.parentID = nil
+                                scheduleSave()
+                            }
+                        }
                 }
-                .font(.system(size: 11.5, weight: .medium))
                 .padding(.bottom, 2)
             }
         }
+    }
+
+    @ViewBuilder
+    private func crumb(id: UUID, title: String, isCurrent: Bool, action: (() -> Void)?) -> some View {
+        let label = HStack(spacing: 5) {
+            crumbIcon(for: id)
+            // Truncating the string keeps every crumb readable without forcing a
+            // fixed width, which would pad short titles inside the scroll view.
+            Text(shortened(title.isEmpty ? (isCurrent ? "Untitled page" : "Untitled") : title))
+                .lineLimit(1)
+        }
+        .font(.system(size: 12, weight: isCurrent ? .semibold : .medium))
+        .foregroundStyle(isCurrent ? OrbitTheme.ink(scheme) : OrbitTheme.ink2(scheme))
+        .padding(.horizontal, 6)
+        .padding(.vertical, 3)
+        .background(
+            hoveredCrumbID == id && action != nil ? OrbitTheme.sunken(scheme) : .clear,
+            in: RoundedRectangle(cornerRadius: 5)
+        )
+
+        if let action {
+            Button(action: action) { label.contentShape(Rectangle()) }
+                .buttonStyle(.plain)
+                .onHover { hovering in
+                    if hovering { hoveredCrumbID = id } else if hoveredCrumbID == id { hoveredCrumbID = nil }
+                }
+                .help("Open “\(title.isEmpty ? "Untitled" : title)”")
+        } else {
+            label
+        }
+    }
+
+    private func shortened(_ title: String, limit: Int = 26) -> String {
+        title.count <= limit ? title : title.prefix(limit).trimmingCharacters(in: .whitespaces) + "…"
     }
 
     @ViewBuilder private func crumbIcon(for id: UUID) -> some View {

@@ -21,6 +21,18 @@ enum OrbitAppIcon {
     }
 }
 
+enum OrbitWindow {
+    /// SwiftUI opens a fixed, roughly half-screen window. Fill the screen
+    /// instead — `visibleFrame` keeps clear of the menu bar and the Dock.
+    static func fillScreen() {
+        DispatchQueue.main.async {
+            guard let window = NSApp.mainWindow ?? NSApp.windows.first(where: { $0.isVisible }),
+                  let screen = window.screen ?? NSScreen.main else { return }
+            window.setFrame(screen.visibleFrame, display: true)
+        }
+    }
+}
+
 @main
 struct OrbitApp: App {
     private let container: ModelContainer = {
@@ -52,7 +64,10 @@ struct OrbitApp: App {
         WindowGroup {
             AppShellView()
                 .frame(minWidth: 420, minHeight: 420)
-                .onAppear { OrbitAppIcon.apply() }
+                .onAppear {
+                    OrbitAppIcon.apply()
+                    OrbitWindow.fillScreen()
+                }
         }
         .modelContainer(container)
         .windowStyle(.hiddenTitleBar)
