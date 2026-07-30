@@ -302,7 +302,11 @@ struct IdeasView: View {
     }
 
     private func createIdea() {
-        let idea = Idea(title: "", content: "", canvasX: nil, canvasY: nil, folderID: selectedFolderID)
+        let idea = Idea(
+            title: "", content: "", canvasX: nil, canvasY: nil,
+            folderID: selectedFolderID,
+            workspaceID: currentWorkspaceID ?? workspaces.first?.id
+        )
         modelContext.insert(idea)
         try? modelContext.save()
         selectedIdeaID = idea.id
