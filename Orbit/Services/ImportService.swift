@@ -76,7 +76,10 @@ enum ImportService {
             }
             let folderIDs = Set((backup.ideaFolders ?? []).map(\.id))
             for item in backup.ideaFolders ?? [] {
-                context.insert(IdeaFolder(id: item.id, name: item.name, createdAt: item.createdAt ?? .now))
+                context.insert(IdeaFolder(
+                    id: item.id, name: item.name, createdAt: item.createdAt ?? .now,
+                    workspaceID: item.workspaceId.flatMap { workspaceIDs.contains($0) ? $0 : nil }
+                ))
             }
             for item in backup.ideas {
                 let folderID = item.folderId.flatMap { folderIDs.contains($0) ? $0 : nil }
@@ -181,7 +184,7 @@ private struct IdeaItem: Decodable { let id: UUID; let title, content: String; l
 /// Optional so backups written before workspaces existed still restore.
 private struct WorkspaceItem: Decodable { let id: UUID; let name: String; let icon: String?; let orderIdx: Int?; let createdAt: Date? }
 private struct IdeaLinkItem: Decodable { let id, ideaAId, ideaBId: UUID; let createdAt: Date? }
-private struct IdeaFolderItem: Decodable { let id: UUID; let name: String; let createdAt: Date? }
+private struct IdeaFolderItem: Decodable { let id: UUID; let name: String; let workspaceId: UUID?; let createdAt: Date? }
 private struct TaskItem: Decodable { let id: UUID; let title, note: String; let done: Bool; let canvasX, canvasY: Double?; let createdAt, completedAt: Date? }
 private struct TaskStepItem: Decodable { let id, taskId: UUID; let parentId: UUID?; let title: String; let done: Bool; let orderIdx: Int; let canvasX, canvasY: Double?; let createdAt: Date? }
 private struct StepLinkItem: Decodable { let id, taskId, sourceId, targetId: UUID; let createdAt: Date? }
