@@ -556,7 +556,7 @@ struct IdeaEditorView: View {
                             openIdea(ancestor.id)
                         }
                         Text("/")
-                            .font(.system(size: 12))
+                            .font(.system(size: 14))
                             .foregroundStyle(OrbitTheme.ink3(scheme).opacity(0.55))
                     }
 
@@ -582,7 +582,7 @@ struct IdeaEditorView: View {
             Text(shortened(title.isEmpty ? (isCurrent ? "Untitled page" : "Untitled") : title))
                 .lineLimit(1)
         }
-        .font(.system(size: 12, weight: isCurrent ? .semibold : .medium))
+        .font(.system(size: 14, weight: isCurrent ? .semibold : .medium))
         .foregroundStyle(isCurrent ? OrbitTheme.ink(scheme) : OrbitTheme.ink2(scheme))
         .padding(.horizontal, 6)
         .padding(.vertical, 3)
@@ -609,9 +609,9 @@ struct IdeaEditorView: View {
 
     @ViewBuilder private func crumbIcon(for id: UUID) -> some View {
         if let icon = PageIcon.read(id, from: settings) {
-            Text(icon).font(.system(size: 11))
+            Text(icon).font(.system(size: 13.5))
         } else {
-            Image(systemName: "doc.text").font(.system(size: 10))
+            Image(systemName: "doc.text").font(.system(size: 12))
         }
     }
 
