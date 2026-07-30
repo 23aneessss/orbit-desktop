@@ -109,7 +109,13 @@ struct AppShellView: View {
         .foregroundStyle(OrbitTheme.ink(scheme))
         .preferredColorScheme(preferredColorScheme)
         .animation(.easeOut(duration: 0.22), value: sidebarCollapsed)
-        .task { SeedService.seedIfNeeded(context: modelContext) }
+        .task {
+            SeedService.seedIfNeeded(context: modelContext)
+            // Creates "ETIC" on first run and adopts every pre-workspace idea.
+            if let home = WorkspaceService.bootstrap(context: modelContext), workspaceID.isEmpty {
+                workspaceID = home.id.uuidString
+            }
+        }
         .onReceive(NotificationCenter.default.publisher(for: .openCommandPalette)) { _ in
             commandPalettePresented = true
         }
