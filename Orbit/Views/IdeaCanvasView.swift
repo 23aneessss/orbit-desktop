@@ -21,7 +21,12 @@ struct IdeaCanvasView: View {
         return storedIdeas.filter { $0.workspaceID == id }
     }
     @Query private var links: [IdeaLink]
-    @Query(sort: \IdeaFolder.name) private var folders: [IdeaFolder]
+    @Query(sort: \IdeaFolder.name) private var storedFolders: [IdeaFolder]
+
+    private var folders: [IdeaFolder] {
+        guard let id = UUID(uuidString: currentWorkspaceRaw) else { return storedFolders }
+        return storedFolders.filter { $0.workspaceID == id }
+    }
 
     @State private var selectedFolderID: UUID?
     @State private var selectedTags: Set<String> = []
@@ -66,6 +71,8 @@ struct IdeaCanvasView: View {
         .task { tileUnplacedIdeas() }
         .onChange(of: ideas.map(\.id)) { tileUnplacedIdeas() }
         .onChange(of: selectedFolderID) { selectedTags.formIntersection(allTags) }
+        // Folders and tags are per-workspace, so stale filters must not persist.
+        .onChange(of: currentWorkspaceRaw) { selectedFolderID = nil; selectedTags = [] }
         .sheet(item: $mergeCandidate) { candidate in
             if let dragged = ideas.first(where: { $0.id == candidate.draggedID }),
                let target = ideas.first(where: { $0.id == candidate.targetID }) {

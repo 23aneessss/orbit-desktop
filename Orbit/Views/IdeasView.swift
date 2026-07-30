@@ -21,6 +21,12 @@ struct IdeasView: View {
         guard let currentWorkspaceID else { return storedIdeas }
         return storedIdeas.filter { $0.workspaceID == currentWorkspaceID }
     }
+
+    /// Folders belong to a workspace too, so one workspace never shows another's.
+    private var folders: [IdeaFolder] {
+        guard let currentWorkspaceID else { return storedFolders }
+        return storedFolders.filter { $0.workspaceID == currentWorkspaceID }
+    }
     @Binding var requestedIdeaID: UUID?
 
     @State private var query = ""
@@ -71,6 +77,8 @@ struct IdeasView: View {
             }
         }
         .onAppear { openRequestedIdea() }
+        // A folder from the previous workspace would filter everything away.
+        .onChange(of: currentWorkspaceRaw) { selectedFolderID = nil }
         .onChange(of: requestedIdeaID) { openRequestedIdea() }
     }
 
@@ -221,7 +229,7 @@ struct IdeasView: View {
         let name = folderDraft.trimmingCharacters(in: .whitespacesAndNewlines)
         folderDraft = ""
         guard !name.isEmpty else { return }
-        let folder = IdeaFolder(name: name)
+        let folder = IdeaFolder(name: name, workspaceID: currentWorkspaceID ?? workspaces.first?.id)
         modelContext.insert(folder)
         try? modelContext.save()
         selectedFolderID = folder.id
