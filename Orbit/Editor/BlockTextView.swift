@@ -115,6 +115,10 @@ struct BlockIntents {
     var copyBlocks: () -> Void = {}
     var deleteBlocks: () -> Void = {}
     var clearBlockSelection: () -> Void = {}
+    /// A mouse drag left this block — start selecting whole blocks from here.
+    var dragSelectBegan: () -> Void = {}
+    /// The drag is now over this block; select the range from the anchor to it.
+    var dragSelectTo: (UUID) -> Void = { _ in }
 }
 
 // MARK: - NSTextView subclass
@@ -122,6 +126,8 @@ struct BlockIntents {
 final class BlockNSTextView: NSTextView {
     var intents = BlockIntents()
     var blockKind: BlockKind = .paragraph
+    /// Which block this view renders, so a drag can name the block it lands on.
+    var blockID = UUID()
     var menuIsOpen = false
     /// True while the editor is in whole-block selection mode; this view then
     /// routes copy / delete / arrows to the document instead of its own text.
@@ -145,9 +151,47 @@ final class BlockNSTextView: NSTextView {
         if blockSelecting { intents.copyBlocks() } else { super.copy(sender) }
     }
 
+    /// Drag from inside this block out to another one and the whole blocks get
+    /// selected, like Notion. AppKit's own `mouseDown` runs a modal tracking
+    /// loop, so `mouseDragged` would never reach us — we track the drag here and
+    /// do the in-block text selection by hand while it stays within bounds.
     override func mouseDown(with event: NSEvent) {
         if blockSelecting { intents.clearBlockSelection() }
-        super.mouseDown(with: event)
+
+        guard event.clickCount == 1,
+              !event.modifierFlags.contains(.shift),
+              let window else {
+            super.mouseDown(with: event)   // double/triple-click, shift-click
+            return
+        }
+
+        window.makeFirstResponder(self)
+        let start = characterIndexForInsertion(at: convert(event.locationInWindow, from: nil))
+        setSelectedRange(NSRange(location: start, length: 0))
+
+        var crossed = false
+        while let next = window.nextEvent(matching: [.leftMouseDragged, .leftMouseUp]) {
+            if next.type == .leftMouseUp { break }
+            let local = convert(next.locationInWindow, from: nil)
+
+            if !crossed, local.y < -6 || local.y > bounds.height + 6 {
+                crossed = true
+                intents.dragSelectBegan()
+            }
+
+            if crossed {
+                // Hit-testing beats caching frames: it stays correct while the
+                // page scrolls under the pointer.
+                if let root = window.contentView,
+                   let hit = root.hitTest(root.convert(next.locationInWindow, from: nil)) as? BlockNSTextView {
+                    intents.dragSelectTo(hit.blockID)
+                }
+            } else {
+                let index = characterIndexForInsertion(at: local)
+                setSelectedRange(NSRange(location: min(start, index), length: abs(index - start)))
+                autoscroll(with: next)
+            }
+        }
     }
 
     // Typing exits block mode (and swallows that one keystroke, like clearing a
