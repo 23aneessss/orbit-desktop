@@ -25,6 +25,7 @@ enum OrbitAppIcon {
 struct OrbitApp: App {
     private let container: ModelContainer = {
         let schema = Schema([
+            Workspace.self,
             Habit.self,
             HabitLog.self,
             Idea.self,
