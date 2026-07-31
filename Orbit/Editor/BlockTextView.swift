@@ -171,6 +171,7 @@ final class BlockNSTextView: NSTextView {
     var onFocusChange: (Bool) -> Void = { _ in }
 
 
+
     override var acceptsFirstResponder: Bool { true }
 
 
