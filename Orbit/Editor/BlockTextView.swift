@@ -175,6 +175,7 @@ final class BlockNSTextView: NSTextView {
 
 
 
+
     override var acceptsFirstResponder: Bool { true }
 
 
