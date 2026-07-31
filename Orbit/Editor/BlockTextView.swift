@@ -173,6 +173,7 @@ final class BlockNSTextView: NSTextView {
 
     override var acceptsFirstResponder: Bool { true }
 
+
     // Cmd-A: first press selects this block's text; once fully selected (or
     // already in block mode) it escalates to selecting every block.
     override func selectAll(_ sender: Any?) {
