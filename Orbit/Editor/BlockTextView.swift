@@ -170,6 +170,7 @@ final class BlockNSTextView: NSTextView {
     var blockSelecting = false
     var onFocusChange: (Bool) -> Void = { _ in }
 
+
     override var acceptsFirstResponder: Bool { true }
 
     // Cmd-A: first press selects this block's text; once fully selected (or
