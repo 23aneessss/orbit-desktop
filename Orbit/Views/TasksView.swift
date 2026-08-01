@@ -405,31 +405,92 @@ private struct TaskRow: View {
     let steps: [OrbitTaskStep]
     let open: () -> Void
     let toggle: () -> Void
+    let setDue: (Date?) -> Void
     let delete: () -> Void
 
+    @State private var hovering = false
+
     var body: some View {
-        HStack(spacing: 13) {
+        HStack(spacing: 12) {
             Button(action: toggle) {
                 Image(systemName: task.done ? "checkmark.circle.fill" : "circle")
-                    .font(.system(size: 20)).foregroundStyle(task.done ? OrbitTheme.accent : OrbitTheme.ink3(scheme))
-            }.buttonStyle(.orbitRow)
-            Button(action: open) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(task.title).font(.system(size: 13.5, weight: .medium)).strikethrough(task.done)
-                    if !task.note.isEmpty { Text(task.note).font(.system(size: 11.5)).foregroundStyle(OrbitTheme.ink2(scheme)).lineLimit(1) }
-                }.frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle())
-            }.buttonStyle(.orbitRow)
-            if !steps.isEmpty {
-                let leafSteps = steps.filter { step in !steps.contains(where: { $0.parentID == step.id }) }
-                Text("\(leafSteps.filter(\.done).count)/\(leafSteps.count)")
-                    .font(.system(size: 11, weight: .semibold)).monospacedDigit()
-                    .padding(.horizontal, 8).padding(.vertical, 4).background(OrbitTheme.accentSoft(scheme), in: Capsule())
-                Text("workflow").font(.system(size: 10.5)).foregroundStyle(OrbitTheme.accent)
+                    .font(.system(size: 19))
+                    .foregroundStyle(task.done ? OrbitTheme.accent : OrbitTheme.ink3(scheme))
+                    .frame(width: 26, height: 26)
             }
-            Menu { Button("Delete", systemImage: "trash", role: .destructive, action: delete) } label: { Image(systemName: "ellipsis") }
-                .menuStyle(.borderlessButton).fixedSize()
+            .buttonStyle(.orbitRow)
+            .help(task.done ? "Mark as not done" : "Mark as done")
+
+            Button(action: open) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(task.title)
+                        .font(.system(size: 14, weight: .medium))
+                        .strikethrough(task.done)
+                        .foregroundStyle(task.done ? OrbitTheme.ink3(scheme) : OrbitTheme.ink(scheme))
+                        .lineLimit(1)
+                    if !task.note.isEmpty {
+                        Text(task.note).font(.system(size: 12)).foregroundStyle(OrbitTheme.ink2(scheme)).lineLimit(1)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .buttonStyle(.orbitRow)
+
+            if !steps.isEmpty {
+                let leaves = steps.filter { step in !steps.contains(where: { $0.parentID == step.id }) }
+                Label("\(leaves.count { $0.done })/\(leaves.count)", systemImage: "point.3.filled.connected.trianglepath.dotted")
+                    .font(.system(size: 11, weight: .semibold)).monospacedDigit()
+                    .foregroundStyle(OrbitTheme.accent)
+                    .padding(.horizontal, 8).padding(.vertical, 4)
+                    .background(OrbitTheme.accentSoft(scheme), in: Capsule())
+                    .help("Workflow progress")
+            }
+
+            if let due = task.dueDate, !task.done { dueChip(due) }
+
+            Menu {
+                Button("Today") { setDue(OrbitDate.calendar.startOfDay(for: .now)) }
+                Button("Tomorrow") { setDue(OrbitDate.date(daysFromToday: 1)) }
+                Button("Next week") { setDue(OrbitDate.date(daysFromToday: 7)) }
+                if task.dueDate != nil { Button("Clear date") { setDue(nil) } }
+                Divider()
+                Button("Delete", systemImage: "trash", role: .destructive, action: delete)
+            } label: {
+                Image(systemName: "ellipsis").frame(width: 24, height: 24)
+            }
+            .menuStyle(.borderlessButton).fixedSize()
+            .foregroundStyle(OrbitTheme.ink3(scheme))
+            .opacity(hovering ? 1 : 0.35)
         }
-        .padding(.horizontal, 16).frame(minHeight: 62)
+        .padding(.horizontal, 14).frame(minHeight: 54)
+        .background(hovering ? OrbitTheme.sunken(scheme).opacity(0.45) : .clear)
+        .onHover { hovering = $0 }
+    }
+
+    /// Relative wording ("Yesterday", "In 3 days") reads faster than a raw date.
+    private func dueChip(_ due: Date) -> some View {
+        let days = OrbitDate.calendar.dateComponents(
+            [.day],
+            from: OrbitDate.calendar.startOfDay(for: .now),
+            to: OrbitDate.calendar.startOfDay(for: due)
+        ).day ?? 0
+
+        let label: String
+        switch days {
+        case 0: label = "Today"
+        case 1: label = "Tomorrow"
+        case -1: label = "Yesterday"
+        case ..<(-1): label = "\(-days) days late"
+        case 2...6: label = due.formatted(.dateTime.weekday(.abbreviated))
+        default: label = due.formatted(.dateTime.month(.abbreviated).day())
+        }
+        let tint = days < 0 ? OrbitTheme.rose : (days == 0 ? OrbitTheme.accent : OrbitTheme.ink2(scheme))
+
+        return Text(label)
+            .font(.system(size: 11.5, weight: .medium))
+            .foregroundStyle(tint)
+            .padding(.horizontal, 8).padding(.vertical, 4)
+            .background(tint.opacity(0.13), in: Capsule())
     }
 }
 
