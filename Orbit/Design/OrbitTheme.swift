@@ -17,32 +17,34 @@ enum OrbitTheme {
     static let lime = Color(hex: "84CC16")
     static let cyan = Color(hex: "06B6D4")
 
+    // Dark values are Notion's: #191919 page, #202020 sidebar/surface,
+    // #2F2F2F hover, rgba(255,255,255,.094) dividers, #D4D4D4 body text.
     static func canvas(_ scheme: ColorScheme) -> Color {
-        scheme == .dark ? Color(hex: "131211") : Color(hex: "F7F6F3")
+        scheme == .dark ? Color(hex: "191919") : Color(hex: "F7F6F3")
     }
 
     static func surface(_ scheme: ColorScheme) -> Color {
-        scheme == .dark ? Color(hex: "1C1A18") : Color(hex: "FFFEFC")
+        scheme == .dark ? Color(hex: "202020") : Color(hex: "FFFEFC")
     }
 
     static func sunken(_ scheme: ColorScheme) -> Color {
-        scheme == .dark ? Color(hex: "262421") : Color(hex: "F2F0EC")
+        scheme == .dark ? Color(hex: "2F2F2F") : Color(hex: "F2F0EC")
     }
 
     static func line(_ scheme: ColorScheme) -> Color {
-        scheme == .dark ? Color(hex: "2C2A26") : Color(hex: "E9E7E1")
+        scheme == .dark ? Color(hex: "2E2E2E") : Color(hex: "E9E7E1")
     }
 
     static func ink(_ scheme: ColorScheme) -> Color {
-        scheme == .dark ? Color(hex: "F1EFEB") : Color(hex: "1C1A17")
+        scheme == .dark ? Color(hex: "D4D4D4") : Color(hex: "1C1A17")
     }
 
     static func ink2(_ scheme: ColorScheme) -> Color {
-        scheme == .dark ? Color(hex: "A19D94") : Color(hex: "6F6B63")
+        scheme == .dark ? Color(hex: "9B9B9B") : Color(hex: "6F6B63")
     }
 
     static func ink3(_ scheme: ColorScheme) -> Color {
-        scheme == .dark ? Color(hex: "6D6961") : Color(hex: "A5A199")
+        scheme == .dark ? Color(hex: "6E6E6E") : Color(hex: "A5A199")
     }
 
     static func accentSoft(_ scheme: ColorScheme) -> Color {
