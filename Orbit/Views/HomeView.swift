@@ -105,22 +105,6 @@ struct HomeView: View {
 
                     VStack(spacing: 16) {
                         VStack(alignment: .leading, spacing: 14) {
-                            HStack { Text("Follow-ups").font(.system(size: 15, weight: .semibold)); Spacer(); Button("View all") { navigate(.people) }.buttonStyle(.plain).font(.system(size: 11.5)).foregroundStyle(OrbitTheme.accent) }
-                            if dueContacts.isEmpty {
-                                Text("Nothing due. Your relationship queue is clear.").font(.system(size: 11.5)).foregroundStyle(OrbitTheme.ink2(scheme))
-                            } else {
-                                ForEach(dueContacts.prefix(4)) { contact in
-                                    HStack(spacing: 9) {
-                                        PersonAvatar(name: contact.name, size: 30)
-                                        VStack(alignment: .leading, spacing: 3) { Text(contact.name).font(.system(size: 12.5, weight: .medium)).lineLimit(1); FollowUpBadge(dateKey: contact.nextFollowUpKey) }
-                                        Spacer()
-                                        Button { contact.nextFollowUpKey = nil; try? modelContext.save() } label: { Image(systemName: "checkmark.circle") }.buttonStyle(.plain).foregroundStyle(OrbitTheme.ink3(scheme)).help("Mark follow-up done")
-                                    }
-                                }
-                            }
-                        }.padding(18).orbitCard()
-
-                        VStack(alignment: .leading, spacing: 14) {
                             Text("Recent ideas").font(.system(size: 15, weight: .semibold))
                             ForEach(ideas.prefix(3)) { idea in
                                 VStack(alignment: .leading, spacing: 3) {
