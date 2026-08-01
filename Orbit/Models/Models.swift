@@ -206,6 +206,9 @@ final class OrbitTask {
     var canvasY: Double?
     var createdAt: Date
     var completedAt: Date?
+    /// Optional so the store migrates in place. This is what lets the Tasks page
+    /// group by Overdue / Today / Upcoming instead of just open vs. done.
+    var dueDate: Date?
 
     init(
         id: UUID = UUID(),
@@ -215,7 +218,8 @@ final class OrbitTask {
         canvasX: Double? = nil,
         canvasY: Double? = nil,
         createdAt: Date = .now,
-        completedAt: Date? = nil
+        completedAt: Date? = nil,
+        dueDate: Date? = nil
     ) {
         self.id = id
         self.title = title
