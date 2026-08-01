@@ -7,7 +7,6 @@ enum OrbitSection: String, CaseIterable, Identifiable {
     case ideas = "Ideas"
     case canvas = "Canvas"
     case tasks = "Tasks"
-    case people = "People"
     case settings = "Settings"
 
     var id: String { rawValue }
@@ -19,7 +18,6 @@ enum OrbitSection: String, CaseIterable, Identifiable {
         case .ideas: "lightbulb"
         case .canvas: "point.3.connected.trianglepath.dotted"
         case .tasks: "checklist"
-        case .people: "person.2"
         case .settings: "gearshape"
         }
     }
@@ -39,7 +37,6 @@ struct AppShellView: View {
     @State private var selection: OrbitSection = .home
     @State private var commandPalettePresented = false
     @State private var requestedIdeaID: UUID?
-    @State private var requestedContactID: UUID?
     @State private var overlaySidebar = false
 
     private var displayName: String {
@@ -121,7 +118,7 @@ struct AppShellView: View {
             commandPalettePresented = true
         }
         .sheet(isPresented: $commandPalettePresented) {
-            CommandPaletteView(selection: $selection, isPresented: $commandPalettePresented, requestedIdeaID: $requestedIdeaID, requestedContactID: $requestedContactID)
+            CommandPaletteView(selection: $selection, isPresented: $commandPalettePresented, requestedIdeaID: $requestedIdeaID)
         }
     }
 
@@ -318,7 +315,6 @@ struct AppShellView: View {
         case .canvas: IdeaCanvasView()
         case .ideas: IdeasView(requestedIdeaID: $requestedIdeaID)
         case .tasks: TasksView()
-        case .people: PeopleView(requestedContactID: $requestedContactID)
         case .settings: SettingsView()
         }
     }
@@ -367,12 +363,10 @@ private struct CommandPaletteView: View {
     @Environment(\.colorScheme) private var scheme
     @Query(sort: \Habit.createdAt) private var habits: [Habit]
     @Query(sort: \Idea.updatedAt, order: .reverse) private var ideas: [Idea]
-    @Query(sort: \Contact.name) private var contacts: [Contact]
     @Query private var logs: [HabitLog]
     @Binding var selection: OrbitSection
     @Binding var isPresented: Bool
     @Binding var requestedIdeaID: UUID?
-    @Binding var requestedContactID: UUID?
     @State private var query = ""
 
     private var results: [OrbitSection] {
@@ -398,7 +392,6 @@ private struct CommandPaletteView: View {
                         paletteHeader("ACTIONS")
                         paletteButton("New idea", symbol: "lightbulb") { modelContext.insert(Idea(title: "", content: "")); try? modelContext.save(); selection = .ideas; isPresented = false }
                         paletteButton("New task", symbol: "checklist") { modelContext.insert(OrbitTask(title: "Untitled task")); try? modelContext.save(); selection = .tasks; isPresented = false }
-                        paletteButton("New person", symbol: "person.badge.plus") { modelContext.insert(Contact(name: "New person")); try? modelContext.save(); selection = .people; isPresented = false }
                     }
 
                     if query.isEmpty || habits.contains(where: { $0.name.localizedStandardContains(query) }) {

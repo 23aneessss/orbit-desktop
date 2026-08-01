@@ -27,8 +27,6 @@ struct SettingsView: View {
     @Query private var stepLinks: [StepLink]
     @Query private var boardStrokes: [BoardStroke]
     @Query private var boardNotes: [BoardNote]
-    @Query private var contacts: [Contact]
-    @Query private var interactions: [Interaction]
     @Query private var settings: [AppSetting]
 
     @AppStorage("orbit:theme") private var themePreference = "system"
@@ -203,7 +201,7 @@ struct SettingsView: View {
     private var dataSection: some View {
         VStack(alignment: .leading, spacing: 22) {
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 120), spacing: 12)], spacing: 12) {
-                countTile("Habits", habits.count); countTile("Check-ins", logs.count); countTile("Ideas", ideas.count); countTile("Tasks", tasks.count); countTile("People", contacts.count); countTile("Interactions", interactions.count)
+                countTile("Habits", habits.count); countTile("Check-ins", logs.count); countTile("Ideas", ideas.count); countTile("Tasks", tasks.count)
             }
             VStack(alignment: .leading, spacing: 10) {
                 Text("Export").font(.system(size: 15, weight: .semibold))

@@ -48,8 +48,6 @@ struct OrbitApp: App {
             StepLink.self,
             BoardStroke.self,
             BoardNote.self,
-            Contact.self,
-            Interaction.self,
             AppSetting.self
         ])
         let configuration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
