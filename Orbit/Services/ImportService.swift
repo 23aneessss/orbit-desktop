@@ -7,10 +7,9 @@ struct ImportSummary {
     let habits: Int
     let ideas: Int
     let tasks: Int
-    let contacts: Int
 
     var message: String {
-        "Restored \(habits) habits, \(ideas) ideas, \(tasks) tasks, and \(contacts) people."
+        "Restored \(habits) habits, \(ideas) ideas, and \(tasks) tasks."
     }
 }
 
@@ -106,12 +105,6 @@ enum ImportService {
             for item in backup.boardNotes {
                 context.insert(BoardNote(id: item.id, taskID: item.taskId, scopeID: item.scopeId, text: item.text, color: item.color, canvasX: item.canvasX, canvasY: item.canvasY, createdAt: item.createdAt ?? .now))
             }
-            for item in backup.contacts {
-                context.insert(Contact(id: item.id, name: item.name, email: item.email, phone: item.phone, company: item.company, role: item.role, tags: item.tags, favorite: item.favorite, lastContactedKey: item.lastContactedAt, nextFollowUpKey: item.nextFollowUp, createdAt: item.createdAt ?? .now))
-            }
-            for item in backup.interactions {
-                context.insert(Interaction(id: item.id, contactID: item.contactId, kind: item.kind, note: item.note, dateKey: item.date, createdAt: item.createdAt ?? .now))
-            }
             for (key, value) in backup.settings { context.insert(AppSetting(key: key, value: value)) }
 
             try context.save()
@@ -119,7 +112,7 @@ enum ImportService {
             if let accent = backup.settings["accent"] { UserDefaults.standard.set(accent, forKey: "orbit:accent") }
             UserDefaults.standard.set(true, forKey: "orbit:tasks-seeded")
             UserDefaults.standard.set(true, forKey: "orbit:people-seeded")
-            return ImportSummary(habits: backup.habits.count, ideas: backup.ideas.count, tasks: backup.tasks.count, contacts: backup.contacts.count)
+            return ImportSummary(habits: backup.habits.count, ideas: backup.ideas.count, tasks: backup.tasks.count)
         } catch {
             context.rollback()
             throw error
@@ -131,13 +124,11 @@ enum ImportService {
         let ideaIDs = Set(backup.ideas.map(\.id))
         let taskIDs = Set(backup.tasks.map(\.id))
         let stepIDs = Set(backup.taskSteps.map(\.id))
-        let contactIDs = Set(backup.contacts.map(\.id))
         guard backup.habitLogs.allSatisfy({ habitIDs.contains($0.habitId) }) else { throw ImportError.missingRelationship("habit") }
         guard backup.ideaLinks.allSatisfy({ ideaIDs.contains($0.ideaAId) && ideaIDs.contains($0.ideaBId) }) else { throw ImportError.missingRelationship("idea") }
         guard backup.ideas.allSatisfy({ $0.parentId == nil || ($0.parentId != $0.id && ideaIDs.contains($0.parentId!)) }) else { throw ImportError.missingRelationship("idea page") }
         guard backup.taskSteps.allSatisfy({ taskIDs.contains($0.taskId) && ($0.parentId == nil || stepIDs.contains($0.parentId!)) }) else { throw ImportError.missingRelationship("task step") }
         guard backup.stepLinks.allSatisfy({ taskIDs.contains($0.taskId) && stepIDs.contains($0.sourceId) && stepIDs.contains($0.targetId) }) else { throw ImportError.missingRelationship("workflow") }
-        guard backup.interactions.allSatisfy({ contactIDs.contains($0.contactId) }) else { throw ImportError.missingRelationship("contact") }
     }
 
     @MainActor
@@ -153,8 +144,6 @@ enum ImportService {
         try context.delete(model: BoardNote.self)
         try context.delete(model: OrbitTaskStep.self)
         try context.delete(model: OrbitTask.self)
-        try context.delete(model: Interaction.self)
-        try context.delete(model: Contact.self)
         try context.delete(model: AppSetting.self)
     }
 }
@@ -173,8 +162,6 @@ private struct Backup: Decodable {
     let stepLinks: [StepLinkItem]
     let boardStrokes: [BoardStrokeItem]
     let boardNotes: [BoardNoteItem]
-    let contacts: [ContactItem]
-    let interactions: [InteractionItem]
     let settings: [String: String]
 }
 
@@ -190,5 +177,3 @@ private struct TaskStepItem: Decodable { let id, taskId: UUID; let parentId: UUI
 private struct StepLinkItem: Decodable { let id, taskId, sourceId, targetId: UUID; let createdAt: Date? }
 private struct BoardStrokeItem: Decodable { let id: UUID; let taskId, scopeId: UUID?; let points: [[Double]]; let color: String; let lineWidth: Double; let createdAt: Date? }
 private struct BoardNoteItem: Decodable { let id: UUID; let taskId, scopeId: UUID?; let text, color: String; let canvasX, canvasY: Double; let createdAt: Date? }
-private struct ContactItem: Decodable { let id: UUID; let name: String; let email, phone, company, role: String?; let tags: [String]; let favorite: Bool; let lastContactedAt, nextFollowUp: String?; let createdAt: Date? }
-private struct InteractionItem: Decodable { let id, contactId: UUID; let kind, note, date: String; let createdAt: Date? }

@@ -409,11 +409,6 @@ private struct CommandPaletteView: View {
                         ForEach(matchingIdeas.prefix(8)) { idea in paletteButton(idea.title.isEmpty ? "Untitled" : idea.title, symbol: "lightbulb") { requestedIdeaID = idea.id; selection = .ideas; isPresented = false } }
                     }
 
-                    let matchingPeople = contacts.filter { query.isEmpty || $0.name.localizedStandardContains(query) }
-                    if !matchingPeople.isEmpty {
-                        paletteHeader("PEOPLE")
-                        ForEach(matchingPeople) { contact in paletteButton(contact.name, symbol: "person") { requestedContactID = contact.id; selection = .people; isPresented = false } }
-                    }
                 }.padding(10)
             }
         }
