@@ -229,6 +229,7 @@ final class OrbitTask {
         self.canvasY = canvasY
         self.createdAt = createdAt
         self.completedAt = completedAt
+        self.dueDate = dueDate
     }
 }
 
