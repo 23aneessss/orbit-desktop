@@ -91,7 +91,7 @@ enum ImportService {
                 context.insert(IdeaLink(id: item.id, ideaAID: item.ideaAId, ideaBID: item.ideaBId, createdAt: item.createdAt ?? .now))
             }
             for item in backup.tasks {
-                context.insert(OrbitTask(id: item.id, title: item.title, note: item.note, done: item.done, canvasX: item.canvasX, canvasY: item.canvasY, createdAt: item.createdAt ?? .now, completedAt: item.completedAt))
+                context.insert(OrbitTask(id: item.id, title: item.title, note: item.note, done: item.done, canvasX: item.canvasX, canvasY: item.canvasY, createdAt: item.createdAt ?? .now, completedAt: item.completedAt, dueDate: item.dueDate))
             }
             for item in backup.taskSteps {
                 context.insert(OrbitTaskStep(id: item.id, taskID: item.taskId, parentID: item.parentId, title: item.title, done: item.done, orderIndex: item.orderIdx, canvasX: item.canvasX, canvasY: item.canvasY, createdAt: item.createdAt ?? .now))
@@ -172,7 +172,7 @@ private struct IdeaItem: Decodable { let id: UUID; let title, content: String; l
 private struct WorkspaceItem: Decodable { let id: UUID; let name: String; let icon: String?; let orderIdx: Int?; let createdAt: Date? }
 private struct IdeaLinkItem: Decodable { let id, ideaAId, ideaBId: UUID; let createdAt: Date? }
 private struct IdeaFolderItem: Decodable { let id: UUID; let name: String; let workspaceId: UUID?; let createdAt: Date? }
-private struct TaskItem: Decodable { let id: UUID; let title, note: String; let done: Bool; let canvasX, canvasY: Double?; let createdAt, completedAt: Date? }
+private struct TaskItem: Decodable { let id: UUID; let title, note: String; let done: Bool; let canvasX, canvasY: Double?; let createdAt, completedAt, dueDate: Date? }
 private struct TaskStepItem: Decodable { let id, taskId: UUID; let parentId: UUID?; let title: String; let done: Bool; let orderIdx: Int; let canvasX, canvasY: Double?; let createdAt: Date? }
 private struct StepLinkItem: Decodable { let id, taskId, sourceId, targetId: UUID; let createdAt: Date? }
 private struct BoardStrokeItem: Decodable { let id: UUID; let taskId, scopeId: UUID?; let points: [[Double]]; let color: String; let lineWidth: Double; let createdAt: Date? }
