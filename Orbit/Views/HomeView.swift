@@ -75,7 +75,7 @@ struct HomeView: View {
                                 Text("\(todayCount) of \(habits.count) complete").font(.system(size: 12)).foregroundStyle(OrbitTheme.ink2(scheme))
                             }
                             Spacer()
-                            Button("View graphs") { navigate(.habits) }.buttonStyle(.plain).foregroundStyle(OrbitTheme.accent)
+                            Button("View graphs") { navigate(.habits) }.buttonStyle(.orbitRow).foregroundStyle(OrbitTheme.accent)
                         }
                         ForEach(habits.prefix(4)) { habit in
                             let count = HabitProgress.count(in: logs.filter { $0.habit?.id == habit.id })
@@ -140,7 +140,7 @@ private struct StatCard: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.orbitRow)
         .orbitCard()
     }
 }

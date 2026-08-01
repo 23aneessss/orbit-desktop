@@ -167,7 +167,7 @@ struct AppShellView: View {
                 .background(OrbitTheme.surface(scheme), in: RoundedRectangle(cornerRadius: 10))
                 .overlay { RoundedRectangle(cornerRadius: 10).stroke(OrbitTheme.line(scheme)) }
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.orbitRow)
             .padding(.horizontal, rail ? 10 : 16)
 
             if !rail {
@@ -226,7 +226,7 @@ struct AppShellView: View {
                 .font(.system(size: 14, weight: .medium))
                 .frame(width: 28, height: 28)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.orbitRow)
         .foregroundStyle(OrbitTheme.ink3(scheme))
         .help(sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar")
         .accessibilityLabel(sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar")
@@ -252,7 +252,7 @@ struct AppShellView: View {
             .background(selection == section ? OrbitTheme.accentSoft(scheme) : .clear,
                         in: RoundedRectangle(cornerRadius: 10))
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.orbitRow)
         .padding(.horizontal, rail ? 9 : 16)
         .help(section.rawValue)
     }
@@ -265,7 +265,7 @@ struct AppShellView: View {
                         .font(.system(size: 14, weight: .medium))
                         .frame(width: 26, height: 26)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.orbitRow)
                 .foregroundStyle(OrbitTheme.ink2(scheme))
                 .help("Show menu")
                 .accessibilityLabel("Show menu")
@@ -299,7 +299,7 @@ struct AppShellView: View {
                     .background(Color(hex: "C7F4E9"), in: Circle())
                     .foregroundStyle(Color(hex: "166B5B"))
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.orbitRow)
         }
         .font(.system(size: 13))
         .padding(.horizontal, widthClass.isCompact ? 14 : 28)
@@ -421,7 +421,7 @@ private struct CommandPaletteView: View {
 
     private func paletteButton(_ title: String, symbol: String, action: @escaping () -> Void) -> some View {
         Button(action: action) { Label(title, systemImage: symbol).font(.system(size: 12.5)).frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 10).frame(height: 34).contentShape(Rectangle()) }
-            .buttonStyle(.plain)
+            .buttonStyle(.orbitRow)
     }
 
     private func toggleHabit(_ habit: Habit) {

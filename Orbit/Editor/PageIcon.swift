@@ -393,7 +393,7 @@ struct PageIconPicker: View {
                         .textFieldStyle(.plain).font(.system(size: 12))
                     if !query.isEmpty {
                         Button { query = "" } label: { Image(systemName: "xmark.circle.fill") }
-                            .buttonStyle(.plain).foregroundStyle(OrbitTheme.ink3(scheme))
+                            .buttonStyle(.orbitRow).foregroundStyle(OrbitTheme.ink3(scheme))
                     }
                 }
                 .padding(.horizontal, 9).frame(height: 28)
@@ -401,7 +401,7 @@ struct PageIconPicker: View {
 
                 if current != nil {
                     Button("Remove") { pick(nil); dismiss() }
-                        .buttonStyle(.plain)
+                        .buttonStyle(.orbitRow)
                         .font(.system(size: 11, weight: .medium))
                         .foregroundStyle(OrbitTheme.rose)
                 }
@@ -459,7 +459,7 @@ struct PageIconPicker: View {
                     )
                     .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.orbitRow)
             .help(entry.keywords)
         }
     }

@@ -88,7 +88,7 @@ struct SettingsView: View {
                                     in: RoundedRectangle(cornerRadius: 9))
                         .foregroundStyle(selection == section ? OrbitTheme.accent : OrbitTheme.ink2(scheme))
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.orbitRow)
             }
             Spacer()
         }
@@ -158,7 +158,7 @@ struct SettingsView: View {
                         Button { setAccent(hex) } label: {
                             Circle().fill(Color(hex: hex)).frame(width: 26, height: 26)
                                 .overlay { Circle().stroke(OrbitTheme.ink(scheme), lineWidth: accentHex.uppercased() == hex ? 2 : 0).padding(-3) }
-                        }.buttonStyle(.plain).help(hex)
+                        }.buttonStyle(.orbitRow).help(hex)
                     }
                     ColorPicker("Custom", selection: $customAccent, supportsOpacity: false)
                         .onChange(of: customAccent) { if let hex = customAccent.orbitHex() { setAccent(hex) } }
@@ -195,7 +195,7 @@ struct SettingsView: View {
             }
             .padding(6)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.orbitRow)
     }
 
     private var dataSection: some View {
@@ -237,7 +237,7 @@ struct SettingsView: View {
             VStack(spacing: 9) { Image(systemName: symbol).font(.system(size: 18)); Text(label).font(.system(size: 11.5, weight: .medium)) }
                 .frame(width: 112, height: 78).background(themePreference == value ? OrbitTheme.accentSoft(scheme) : OrbitTheme.surface(scheme), in: RoundedRectangle(cornerRadius: 11))
                 .overlay { RoundedRectangle(cornerRadius: 11).stroke(themePreference == value ? OrbitTheme.accent : OrbitTheme.line(scheme)) }
-        }.buttonStyle(.plain)
+        }.buttonStyle(.orbitRow)
     }
     private func countTile(_ label: String, _ value: Int) -> some View { VStack(alignment: .leading, spacing: 6) { Text("\(value)").font(.system(size: 20, weight: .semibold)).monospacedDigit(); Text(label).font(.system(size: 11.5)).foregroundStyle(OrbitTheme.ink2(scheme)) }.padding(16).frame(maxWidth: .infinity, alignment: .leading).orbitCard() }
     private func setting(_ key: String) -> String? { settings.first(where: { $0.key == key })?.value }

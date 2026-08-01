@@ -171,7 +171,7 @@ private struct HabitCard: View {
                             .frame(width: 36, height: 38)
                             .contentShape(Rectangle())
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.orbitRow)
                     .disabled(todayCount == 0)
                     .opacity(todayCount == 0 ? 0.28 : 1)
                     .help("Remove one check-in for today")
@@ -198,7 +198,7 @@ private struct HabitCard: View {
                             .frame(width: 36, height: 38)
                             .contentShape(Rectangle())
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.orbitRow)
                     .foregroundStyle(accent)
                     .disabled(todayCount >= habit.targetPerDay)
                     .opacity(todayCount >= habit.targetPerDay ? 0.55 : 1)
@@ -312,7 +312,7 @@ struct HeatmapView: View {
             .aspectRatio(1, contentMode: .fit)
         if let advanceDate {
             Button { advanceDate(key) } label: { square }
-                .buttonStyle(.plain)
+                .buttonStyle(.orbitRow)
                 .help("\(key) · \(count) of \(targetPerDay). Click to advance; after the goal, click to reset.")
                 .accessibilityLabel(key)
                 .accessibilityValue("\(count) of \(targetPerDay) check-ins")
@@ -381,7 +381,7 @@ private struct HabitEditorSheet: View {
                                         .foregroundStyle(icon == symbol ? OrbitTheme.habitColor(color) : OrbitTheme.ink2(scheme))
                                         .background(icon == symbol ? OrbitTheme.habitColor(color).opacity(0.13) : Color.clear, in: RoundedRectangle(cornerRadius: 7))
                                 }
-                                .buttonStyle(.plain)
+                                .buttonStyle(.orbitRow)
                                 .accessibilityLabel(symbol)
                                 .accessibilityAddTraits(icon == symbol ? .isSelected : [])
                             }
@@ -395,7 +395,7 @@ private struct HabitEditorSheet: View {
                                     Circle().fill(OrbitTheme.habitColor(value)).frame(width: 20, height: 20)
                                         .overlay { Circle().stroke(OrbitTheme.ink(scheme).opacity(color == value ? 0.55 : 0), lineWidth: 2).padding(-3) }
                                 }
-                                .buttonStyle(.plain)
+                                .buttonStyle(.orbitRow)
                                 .accessibilityLabel(value.capitalized)
                                 .accessibilityAddTraits(color == value ? .isSelected : [])
                             }

@@ -182,7 +182,7 @@ private struct GlobalTaskBoardView: View {
         HStack(spacing: 6) {
             ForEach(WorkflowTool.allCases) { item in
                 Button { tool = item } label: { Image(systemName: item.icon).frame(width: 28, height: 28) }
-                    .buttonStyle(.plain).background(tool == item ? OrbitTheme.accentSoft(scheme) : .clear, in: RoundedRectangle(cornerRadius: 7))
+                    .buttonStyle(.orbitRow).background(tool == item ? OrbitTheme.accentSoft(scheme) : .clear, in: RoundedRectangle(cornerRadius: 7))
                     .help(item.title).accessibilityLabel(item.title)
             }
             Divider().frame(height: 22).padding(.horizontal, 3)
@@ -190,9 +190,9 @@ private struct GlobalTaskBoardView: View {
                 Button { inkColor = color } label: {
                     Circle().fill(Color(hex: color)).frame(width: 15, height: 15)
                         .overlay { Circle().stroke(.primary.opacity(inkColor == color ? 0.65 : 0), lineWidth: 2).padding(-2) }
-                }.buttonStyle(.plain).frame(width: 22, height: 28)
+                }.buttonStyle(.orbitRow).frame(width: 22, height: 28)
             }
-            Button { undoAnnotation() } label: { Image(systemName: "arrow.uturn.backward").frame(width: 28, height: 28) }.buttonStyle(.plain).help("Undo annotation")
+            Button { undoAnnotation() } label: { Image(systemName: "arrow.uturn.backward").frame(width: 28, height: 28) }.buttonStyle(.orbitRow).help("Undo annotation")
             Divider().frame(height: 22).padding(.horizontal, 3)
             Picker("View", selection: Binding(get: { "board" }, set: { if $0 == "list" { showList() } })) {
                 Text("List").tag("list"); Text("Board").tag("board")
@@ -246,9 +246,9 @@ private struct TaskBoardNode: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Button(action: toggle) { Image(systemName: task.done ? "checkmark.circle.fill" : childSteps.isEmpty ? "circle" : "circle.dotted") }.buttonStyle(.plain).foregroundStyle(task.done ? OrbitTheme.accent : OrbitTheme.ink3(scheme))
+                Button(action: toggle) { Image(systemName: task.done ? "checkmark.circle.fill" : childSteps.isEmpty ? "circle" : "circle.dotted") }.buttonStyle(.orbitRow).foregroundStyle(task.done ? OrbitTheme.accent : OrbitTheme.ink3(scheme))
                 TextField("Task", text: $task.title).textFieldStyle(.plain).font(.system(size: 13, weight: .semibold)).onSubmit(moved)
-                if !childSteps.isEmpty { Button(action: open) { Image(systemName: "arrow.up.right") }.buttonStyle(.plain).foregroundStyle(OrbitTheme.accent).help("Open workflow") }
+                if !childSteps.isEmpty { Button(action: open) { Image(systemName: "arrow.up.right") }.buttonStyle(.orbitRow).foregroundStyle(OrbitTheme.accent).help("Open workflow") }
                 Menu { Button("Delete", role: .destructive, action: delete) } label: { Image(systemName: "ellipsis") }.menuStyle(.borderlessButton).fixedSize()
             }
             if childSteps.isEmpty {
@@ -283,13 +283,13 @@ private struct TaskRow: View {
             Button(action: toggle) {
                 Image(systemName: task.done ? "checkmark.circle.fill" : "circle")
                     .font(.system(size: 20)).foregroundStyle(task.done ? OrbitTheme.accent : OrbitTheme.ink3(scheme))
-            }.buttonStyle(.plain)
+            }.buttonStyle(.orbitRow)
             Button(action: open) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(task.title).font(.system(size: 13.5, weight: .medium)).strikethrough(task.done)
                     if !task.note.isEmpty { Text(task.note).font(.system(size: 11.5)).foregroundStyle(OrbitTheme.ink2(scheme)).lineLimit(1) }
                 }.frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle())
-            }.buttonStyle(.plain)
+            }.buttonStyle(.orbitRow)
             if !steps.isEmpty {
                 let leafSteps = steps.filter { step in !steps.contains(where: { $0.parentID == step.id }) }
                 Text("\(leafSteps.filter(\.done).count)/\(leafSteps.count)")
@@ -320,7 +320,7 @@ private struct TaskDetailView: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack(spacing: 14) {
-                Button(action: close) { Label("Tasks", systemImage: "chevron.left") }.buttonStyle(.plain)
+                Button(action: close) { Label("Tasks", systemImage: "chevron.left") }.buttonStyle(.orbitRow)
                 TextField("Task title", text: $task.title).textFieldStyle(.plain).font(.system(size: 18, weight: .semibold))
                     .onSubmit(save)
                 Spacer()
@@ -425,20 +425,20 @@ private struct StepBlock: View {
         VStack(spacing: 0) {
             HStack(spacing: 12) {
                 Button(action: toggle) { Image(systemName: step.done ? "checkmark.circle.fill" : children.isEmpty ? "circle" : "circle.dotted") }
-                    .buttonStyle(.plain).font(.system(size: 19)).foregroundStyle(step.done ? OrbitTheme.accent : OrbitTheme.ink3(scheme))
+                    .buttonStyle(.orbitRow).font(.system(size: 19)).foregroundStyle(step.done ? OrbitTheme.accent : OrbitTheme.ink3(scheme))
                 TextField("Step", text: $step.title).textFieldStyle(.plain).font(.system(size: 13.5, weight: .medium))
                 if !children.isEmpty {
                     Text("\(children.filter(\.done).count)/\(children.count)").font(.system(size: 10.5)).monospacedDigit().foregroundStyle(OrbitTheme.ink2(scheme))
                 }
-                Button(action: addChild) { Image(systemName: "plus") }.buttonStyle(.plain).help("Add sub-step")
-                Button(role: .destructive, action: delete) { Image(systemName: "trash") }.buttonStyle(.plain).help("Delete step")
+                Button(action: addChild) { Image(systemName: "plus") }.buttonStyle(.orbitRow).help("Add sub-step")
+                Button(role: .destructive, action: delete) { Image(systemName: "trash") }.buttonStyle(.orbitRow).help("Delete step")
             }.padding(.horizontal, 16).frame(height: 52)
             ForEach(children) { child in
                 HStack(spacing: 10) {
                     Image(systemName: "arrow.turn.down.right").foregroundStyle(OrbitTheme.ink3(scheme))
                     Button { toggleChild(child) } label: {
                         Image(systemName: child.done ? "checkmark.circle.fill" : "circle").foregroundStyle(child.done ? OrbitTheme.accent : OrbitTheme.ink3(scheme))
-                    }.buttonStyle(.plain)
+                    }.buttonStyle(.orbitRow)
                     TextField("Sub-step", text: Bindable(child).title).textFieldStyle(.plain)
                 }.font(.system(size: 12.5)).padding(.leading, 44).padding(.trailing, 16).frame(height: 42)
                     .background(OrbitTheme.sunken(scheme).opacity(0.42))
@@ -533,14 +533,14 @@ private struct WorkflowCanvasView: View {
 
     private var workflowToolbar: some View {
         HStack(spacing: 6) {
-            Button { leaveScope() } label: { Image(systemName: "house").frame(width: 28, height: 28) }.buttonStyle(.plain).disabled(scopeID == nil)
+            Button { leaveScope() } label: { Image(systemName: "house").frame(width: 28, height: 28) }.buttonStyle(.orbitRow).disabled(scopeID == nil)
             Image(systemName: "chevron.right").font(.system(size: 9)).foregroundStyle(OrbitTheme.ink3(scheme))
             Text(scopeID.flatMap { id in steps.first(where: { $0.id == id })?.title } ?? "Workflow")
                 .font(.system(size: 12, weight: .semibold)).lineLimit(1).frame(maxWidth: 110, alignment: .leading)
             Divider().frame(height: 22).padding(.horizontal, 3)
             ForEach(WorkflowTool.allCases) { item in
                 Button { tool = item } label: { Image(systemName: item.icon).frame(width: 28, height: 28) }
-                    .buttonStyle(.plain).background(tool == item ? OrbitTheme.accentSoft(scheme) : Color.clear, in: RoundedRectangle(cornerRadius: 7))
+                    .buttonStyle(.orbitRow).background(tool == item ? OrbitTheme.accentSoft(scheme) : Color.clear, in: RoundedRectangle(cornerRadius: 7))
                     .help(item.title).accessibilityLabel(item.title)
             }
             Divider().frame(height: 22).padding(.horizontal, 3)
@@ -548,14 +548,14 @@ private struct WorkflowCanvasView: View {
                 Button { inkColor = color } label: {
                     Circle().fill(Color(hex: color)).frame(width: 15, height: 15)
                         .overlay { Circle().stroke(.primary.opacity(inkColor == color ? 0.65 : 0), lineWidth: 2).padding(-2) }
-                }.buttonStyle(.plain).frame(width: 22, height: 28).help("Ink color")
+                }.buttonStyle(.orbitRow).frame(width: 22, height: 28).help("Ink color")
             }
-            Button { undoAnnotation() } label: { Image(systemName: "arrow.uturn.backward").frame(width: 28, height: 28) }.buttonStyle(.plain).help("Undo last annotation")
+            Button { undoAnnotation() } label: { Image(systemName: "arrow.uturn.backward").frame(width: 28, height: 28) }.buttonStyle(.orbitRow).help("Undo last annotation")
             Divider().frame(height: 22).padding(.horizontal, 3)
             if selectedLinkID != nil {
                 Button(role: .destructive) { deleteSelectedLink() } label: {
                     Image(systemName: "link.badge.minus").frame(width: 28, height: 28)
-                }.buttonStyle(.plain).foregroundStyle(.red).help("Delete selected link")
+                }.buttonStyle(.orbitRow).foregroundStyle(.red).help("Delete selected link")
                 Divider().frame(height: 22).padding(.horizontal, 3)
             }
             Button { addStep() } label: { Label("Add step", systemImage: "plus") }.buttonStyle(.borderedProminent).controlSize(.small).tint(OrbitTheme.accent)
@@ -774,12 +774,12 @@ private struct WorkflowNode: View {
     var body: some View {
         HStack(spacing: 11) {
             Button(action: toggle) { Image(systemName: step.done ? "checkmark.circle.fill" : hasChildren ? "circle.dotted" : "circle") }
-                .buttonStyle(.plain).font(.system(size: 18)).foregroundStyle(step.done ? OrbitTheme.accent : OrbitTheme.ink3(scheme))
+                .buttonStyle(.orbitRow).font(.system(size: 18)).foregroundStyle(step.done ? OrbitTheme.accent : OrbitTheme.ink3(scheme))
                 .accessibilityLabel(step.done ? "Mark incomplete" : "Mark complete")
             TextField("Step", text: $step.title).textFieldStyle(.plain).font(.system(size: 12.5, weight: .medium)).onSubmit(moved)
             if hasChildren {
                 Button(action: open) { Image(systemName: "rectangle.stack") }
-                    .buttonStyle(.plain).foregroundStyle(OrbitTheme.accent).help("Open sub-workflow").accessibilityLabel("Open sub-workflow")
+                    .buttonStyle(.orbitRow).foregroundStyle(OrbitTheme.accent).help("Open sub-workflow").accessibilityLabel("Open sub-workflow")
             }
         }
         .padding(13).frame(width: 220, height: 70)

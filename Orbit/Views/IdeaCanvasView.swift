@@ -226,7 +226,7 @@ struct IdeaCanvasView: View {
 
     private func canvasControl(_ symbol: String, help: String, action: @escaping () -> Void) -> some View {
         Button(action: action) { Image(systemName: symbol).frame(width: 28, height: 28) }
-            .buttonStyle(.plain).background(Color.clear, in: RoundedRectangle(cornerRadius: 6)).help(help)
+            .buttonStyle(.orbitRow).background(Color.clear, in: RoundedRectangle(cornerRadius: 6)).help(help)
     }
 
     private var panGesture: some Gesture {

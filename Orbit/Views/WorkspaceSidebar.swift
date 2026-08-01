@@ -85,7 +85,7 @@ struct WorkspaceSidebar: View {
             .background(isCurrent ? OrbitTheme.accentSoft(scheme) : .clear,
                         in: RoundedRectangle(cornerRadius: 9))
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.orbitRow)
         .padding(.horizontal, rail ? 9 : 16)
         .help(workspace.name)
         .draggable(workspace.id.uuidString)
@@ -131,7 +131,7 @@ struct WorkspaceSidebar: View {
             .padding(.horizontal, rail ? 18 : 16)
             .frame(maxWidth: .infinity, minHeight: 34, alignment: .leading)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.orbitRow)
         .padding(.horizontal, rail ? 9 : 16)
         .help("Create a workspace")
     }
@@ -167,7 +167,7 @@ private struct WorkspaceEditorSheet: View {
                         .frame(width: 42, height: 42)
                         .background(OrbitTheme.sunken(scheme), in: RoundedRectangle(cornerRadius: 9))
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.orbitRow)
                 .help("Choose an icon")
                 .popover(isPresented: $pickingIcon, arrowEdge: .bottom) {
                     PageIconPicker(current: icon) { chosen in icon = chosen ?? "🗂" }

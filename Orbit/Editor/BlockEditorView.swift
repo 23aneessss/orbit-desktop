@@ -159,7 +159,7 @@ struct BlockEditorView: View {
                     .background(OrbitTheme.sunken(scheme).opacity(0.9), in: RoundedRectangle(cornerRadius: 5))
                     .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.orbitRow)
             .foregroundStyle(OrbitTheme.ink2(scheme))
             .help("Click to add a block below")
 
@@ -286,7 +286,7 @@ struct BlockEditorView: View {
             .padding(.vertical, 5)
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.orbitRow)
     }
 
     // MARK: block leading markers
@@ -403,7 +403,7 @@ struct BlockEditorView: View {
             .padding(.vertical, 3)
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.orbitRow)
         .help("Open this sub-page")
     }
 
@@ -993,7 +993,7 @@ private struct SlashMenu: View {
                     )
                     .contentShape(Rectangle())
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.orbitRow)
                 .padding(.horizontal, 5)
             }
         }

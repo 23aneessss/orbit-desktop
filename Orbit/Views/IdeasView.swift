@@ -108,7 +108,7 @@ struct IdeasView: View {
                         TextField("Search titles, notes, and tags", text: $query).textFieldStyle(.plain)
                         if !query.isEmpty {
                             Button { query = "" } label: { Image(systemName: "xmark.circle.fill") }
-                                .buttonStyle(.plain).foregroundStyle(OrbitTheme.ink3(scheme))
+                                .buttonStyle(.orbitRow).foregroundStyle(OrbitTheme.ink3(scheme))
                         }
                     }
                     .padding(.horizontal, 13).frame(height: 40)
@@ -122,7 +122,7 @@ struct IdeasView: View {
                             .background(OrbitTheme.surface(scheme), in: RoundedRectangle(cornerRadius: 10))
                             .overlay { RoundedRectangle(cornerRadius: 10).stroke(OrbitTheme.line(scheme)) }
                     }
-                    .buttonStyle(.plain).help("Create a folder to organize ideas")
+                    .buttonStyle(.orbitRow).help("Create a folder to organize ideas")
                 }
 
                 if !folders.isEmpty { folderStrip }
@@ -206,7 +206,7 @@ struct IdeasView: View {
                     Button("#\(tag)") {
                         if active { selectedTags.remove(tag) } else { selectedTags.insert(tag) }
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.orbitRow)
                     .font(.system(size: 11.5, weight: .medium))
                     .foregroundStyle(active ? OrbitTheme.accent : OrbitTheme.ink2(scheme))
                     .padding(.horizontal, 10).frame(height: 32)
@@ -216,7 +216,7 @@ struct IdeasView: View {
                     Button { selectedTags = [] } label: {
                         Label("Clear", systemImage: "xmark")
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.orbitRow)
                     .font(.system(size: 11, weight: .medium))
                     .foregroundStyle(OrbitTheme.ink3(scheme))
                     .padding(.horizontal, 9).frame(height: 32)
@@ -364,7 +364,7 @@ private struct FolderChip: View {
             .overlay { Capsule().stroke(targeted ? OrbitTheme.accent : .clear, lineWidth: 1.5) }
             .contentShape(Capsule())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.orbitRow)
         .dropDestination(for: String.self) { items, _ in
             guard let id = items.first.flatMap(UUID.init(uuidString:)) else { return false }
             return drop(id)
@@ -451,7 +451,7 @@ private struct IdeaBrowserCard: View {
             }
             .padding(16).frame(maxWidth: .infinity, minHeight: 154, alignment: .topLeading).contentShape(Rectangle())
         }
-        .buttonStyle(.plain).orbitCard()
+        .buttonStyle(.orbitRow).orbitCard()
     }
 }
 
@@ -515,7 +515,7 @@ struct IdeaEditorView: View {
 
     private var editorHeader: some View {
         HStack(spacing: 14) {
-            Button(action: close) { Label("Ideas", systemImage: "chevron.left") }.buttonStyle(.plain)
+            Button(action: close) { Label("Ideas", systemImage: "chevron.left") }.buttonStyle(.orbitRow)
             Spacer()
             Text(saveState).font(.system(size: 11.5)).foregroundStyle(OrbitTheme.ink3(scheme))
             Button { showingRelations.toggle() } label: {
@@ -527,14 +527,14 @@ struct IdeaEditorView: View {
                     }
                 }
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.orbitRow)
             .foregroundStyle(showingRelations ? OrbitTheme.accent : OrbitTheme.ink2(scheme))
             .help("Relationships")
             .popover(isPresented: $showingRelations, arrowEdge: .bottom) { relationsPopover }
             Button { idea.pinned.toggle(); scheduleSave() } label: { Image(systemName: idea.pinned ? "pin.fill" : "pin") }
-                .buttonStyle(.plain).foregroundStyle(idea.pinned ? OrbitTheme.accent : OrbitTheme.ink2(scheme)).help(idea.pinned ? "Unpin" : "Pin")
+                .buttonStyle(.orbitRow).foregroundStyle(idea.pinned ? OrbitTheme.accent : OrbitTheme.ink2(scheme)).help(idea.pinned ? "Unpin" : "Pin")
             Button(role: .destructive) { deleteIdea() } label: { Image(systemName: "trash") }
-                .buttonStyle(.plain).help("Delete idea")
+                .buttonStyle(.orbitRow).help("Delete idea")
         }
         .padding(.horizontal, orbitWidth.isCompact ? 14 : 28).frame(height: 54)
     }
@@ -593,7 +593,7 @@ struct IdeaEditorView: View {
 
         if let action {
             Button(action: action) { label.contentShape(Rectangle()) }
-                .buttonStyle(.plain)
+                .buttonStyle(.orbitRow)
                 .onHover { hovering in
                     if hovering { hoveredCrumbID = id } else if hoveredCrumbID == id { hoveredCrumbID = nil }
                 }
@@ -632,7 +632,7 @@ struct IdeaEditorView: View {
                         .background(OrbitTheme.sunken(scheme), in: RoundedRectangle(cornerRadius: 6))
                 }
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.orbitRow)
             .help(icon == nil ? "Add a page icon" : "Change page icon")
             .popover(isPresented: $showingIconPicker, arrowEdge: .bottom) {
                 PageIconPicker(current: icon) { chosen in
@@ -672,7 +672,7 @@ struct IdeaEditorView: View {
                     HStack(spacing: 4) {
                         Text("#\(tag)")
                         Button { removeTag(tag) } label: { Image(systemName: "xmark") }
-                            .buttonStyle(.plain).font(.system(size: 8, weight: .bold))
+                            .buttonStyle(.orbitRow).font(.system(size: 8, weight: .bold))
                     }
                     .font(.system(size: 11.5)).foregroundStyle(OrbitTheme.ink2(scheme))
                     .padding(.horizontal, 8).padding(.vertical, 5)
@@ -695,7 +695,7 @@ struct IdeaEditorView: View {
                                 .padding(.horizontal, 8).padding(.vertical, 4)
                                 .background(OrbitTheme.accentSoft(scheme), in: Capsule())
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(.orbitRow)
                     }
                 }
             }
@@ -751,9 +751,9 @@ struct IdeaEditorView: View {
                             if let related = allIdeas.first(where: { $0.id == link[keyPath: targetKeyPath] }) {
                                 HStack(spacing: 5) {
                                     Button(related.title.isEmpty ? "Untitled" : related.title) { openIdea(related.id) }
-                                        .buttonStyle(.plain).lineLimit(1)
+                                        .buttonStyle(.orbitRow).lineLimit(1)
                                     Button { removeRelation(link) } label: { Image(systemName: "xmark") }
-                                        .buttonStyle(.plain).font(.system(size: 8, weight: .bold))
+                                        .buttonStyle(.orbitRow).font(.system(size: 8, weight: .bold))
                                         .help("Remove relationship")
                                 }
                                 .font(.system(size: 11.5, weight: .medium)).foregroundStyle(OrbitTheme.ink2(scheme))
