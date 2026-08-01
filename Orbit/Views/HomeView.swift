@@ -13,11 +13,21 @@ struct HomeView: View {
     let name: String
     let navigate: (OrbitSection) -> Void
 
-    private var todayCount: Int {
+    /// Today's check-ins per habit, computed once per render. Both the counter
+    /// and the habit rows below read this instead of each re-filtering the whole
+    /// log table, which was O(habits × logs) every time the view rebuilt.
+    private var todayPerHabit: [UUID: Int] {
         let today = OrbitDate.key()
-        return habits.filter { habit in
-            HabitProgress.count(on: today, in: logs.filter { $0.habit?.id == habit.id }) >= habit.targetPerDay
-        }.count
+        var counts: [UUID: Int] = [:]
+        for log in logs where log.dateKey == today {
+            if let id = log.habit?.id { counts[id, default: 0] += 1 }
+        }
+        return counts
+    }
+
+    private var todayCount: Int {
+        let counts = todayPerHabit
+        return habits.count { counts[$0.id, default: 0] >= $0.targetPerDay }
     }
 
     private var openTasks: Int { tasks.count { !$0.done } }
@@ -77,8 +87,9 @@ struct HomeView: View {
                             Spacer()
                             Button("View graphs") { navigate(.habits) }.buttonStyle(.orbitRow).foregroundStyle(OrbitTheme.accent)
                         }
+                        let counts = todayPerHabit
                         ForEach(habits.prefix(4)) { habit in
-                            let count = HabitProgress.count(in: logs.filter { $0.habit?.id == habit.id })
+                            let count = counts[habit.id, default: 0]
                             HStack(spacing: 12) {
                                 Image(systemName: habit.icon).foregroundStyle(OrbitTheme.habitColor(habit.color))
                                     .frame(width: 34, height: 34)

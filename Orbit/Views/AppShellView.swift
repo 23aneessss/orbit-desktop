@@ -43,11 +43,16 @@ struct AppShellView: View {
         settings.first(where: { $0.key == "name" })?.value ?? ""
     }
 
+    /// One pass over the logs instead of re-scanning the whole table per habit.
+    /// The old shape was O(habits × logs) on *every* render, which is what made
+    /// clicking around the app feel laggy once a year of check-ins had built up.
     private var completedToday: Int {
         let today = OrbitDate.key()
-        return habits.filter { habit in
-            HabitProgress.count(on: today, in: logs.filter { $0.habit?.id == habit.id }) >= habit.targetPerDay
-        }.count
+        var perHabit: [UUID: Int] = [:]
+        for log in logs where log.dateKey == today {
+            if let id = log.habit?.id { perHabit[id, default: 0] += 1 }
+        }
+        return habits.count { perHabit[$0.id, default: 0] >= $0.targetPerDay }
     }
 
     /// How the menu presents itself at the current window width.
