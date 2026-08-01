@@ -54,7 +54,7 @@ struct HomeView: View {
                 VStack(alignment: .leading, spacing: 18) {
                     VStack(alignment: .leading, spacing: 3) {
                         Text("Activity").font(.system(size: 15, weight: .semibold))
-                        Text("\(logs.count + ideas.count + interactions.count) actions in the last 12 months")
+                        Text("\(logs.count + ideas.count + tasks.count) actions in the last 12 months")
                             .font(.system(size: 12.5)).foregroundStyle(OrbitTheme.ink2(scheme))
                     }
                     HeatmapView(
