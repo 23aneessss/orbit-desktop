@@ -8,8 +8,7 @@ struct HomeView: View {
     @Query private var habits: [Habit]
     @Query private var logs: [HabitLog]
     @Query private var ideas: [Idea]
-    @Query private var contacts: [Contact]
-    @Query private var interactions: [Interaction]
+    @Query private var tasks: [OrbitTask]
 
     let name: String
     let navigate: (OrbitSection) -> Void
@@ -21,10 +20,7 @@ struct HomeView: View {
         }.count
     }
 
-    private var dueContacts: [Contact] {
-        contacts.filter { $0.nextFollowUpKey.map { $0 <= OrbitDate.key() } ?? false }
-            .sorted { ($0.nextFollowUpKey ?? "") < ($1.nextFollowUpKey ?? "") }
-    }
+    private var openTasks: Int { tasks.count { !$0.done } }
 
     private var featuredHabit: Habit? { habits.first }
 
@@ -52,7 +48,7 @@ struct HomeView: View {
                     StatCard(icon: "flame", label: "Current streak", value: "\(currentStreak) \(currentStreak == 1 ? "day" : "days")", note: featuredHabit?.name ?? "Start a habit") { navigate(.habits) }
                     StatCard(icon: "calendar.badge.checkmark", label: "Today", value: "\(todayCount)/\(habits.count)", note: "habits completed") { navigate(.habits) }
                     StatCard(icon: "lightbulb", label: "Ideas", value: "\(ideas.count)", note: "captured locally") { navigate(.ideas) }
-                    StatCard(icon: "person.2", label: "People", value: "\(contacts.count)", note: "\(dueContacts.count) follow-ups due") { navigate(.people) }
+                    StatCard(icon: "checklist", label: "Tasks", value: "\(openTasks)", note: "open right now") { navigate(.tasks) }
                 }
 
                 VStack(alignment: .leading, spacing: 18) {
