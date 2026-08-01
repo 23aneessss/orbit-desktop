@@ -14,6 +14,8 @@ struct TasksView: View {
     @AppStorage("orbit:tasks-seeded") private var tasksSeeded = false
     @AppStorage("orbit:tasks-mode") private var tasksMode = "list"
     @State private var selectedTaskID: UUID?
+    @State private var draftTitle = ""
+    @State private var showCompleted = false
 
     var body: some View {
         if let selectedTaskID, let task = tasks.first(where: { $0.id == selectedTaskID }) {
@@ -42,48 +44,175 @@ struct TasksView: View {
         }
     }
 
+    // MARK: - List
+
+    /// Tasks grouped the way you actually work through them.
+    ///
+    /// The old page had two buckets — Open and Completed — which says nothing
+    /// about *when* anything is due, so it could not answer "what do I do now".
+    /// Grouping by date makes the top of the screen the answer to that question.
+    private enum Bucket: String, CaseIterable {
+        case overdue = "Overdue"
+        case today = "Today"
+        case upcoming = "Upcoming"
+        case someday = "No date"
+
+        var tint: Color {
+            switch self {
+            case .overdue: OrbitTheme.rose
+            case .today: OrbitTheme.accent
+            case .upcoming: OrbitTheme.cobalt
+            case .someday: OrbitTheme.teal
+            }
+        }
+    }
+
+    private func bucket(for task: OrbitTask) -> Bucket {
+        guard let due = task.dueDate else { return .someday }
+        let startOfToday = OrbitDate.calendar.startOfDay(for: .now)
+        let startOfDue = OrbitDate.calendar.startOfDay(for: due)
+        if startOfDue < startOfToday { return .overdue }
+        if startOfDue == startOfToday { return .today }
+        return .upcoming
+    }
+
+    private var openTasks: [OrbitTask] { tasks.filter { !$0.done } }
+    private var doneTasks: [OrbitTask] { tasks.filter(\.done) }
+
+    private var grouped: [Bucket: [OrbitTask]] {
+        var result: [Bucket: [OrbitTask]] = [:]
+        for task in openTasks { result[bucket(for: task), default: []].append(task) }
+        // Inside a bucket, the soonest deadline comes first.
+        for key in result.keys {
+            result[key]?.sort { ($0.dueDate ?? .distantFuture) < ($1.dueDate ?? .distantFuture) }
+        }
+        return result
+    }
+
     private var taskList: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 26) {
-                HStack(alignment: .bottom) {
-                    VStack(alignment: .leading, spacing: 7) {
-                        Text("Tasks").font(.system(size: 27, weight: .semibold))
-                        Text("Simple actions and connected workflows, kept in one place.")
-                            .font(.system(size: 13.5)).foregroundStyle(OrbitTheme.ink2(scheme))
-                    }
-                    Spacer()
-                    Picker("View", selection: $tasksMode) { Text("List").tag("list"); Text("Board").tag("board") }
-                        .pickerStyle(.segmented).frame(width: 150)
-                    Button { createTask() } label: { Label("New task", systemImage: "plus") }
-                        .buttonStyle(.borderedProminent).tint(OrbitTheme.accent)
+            VStack(alignment: .leading, spacing: 22) {
+                header
+                quickAdd
+
+                let groups = grouped
+                ForEach(Bucket.allCases, id: \.self) { bucket in
+                    taskSection(bucket.rawValue, groups[bucket] ?? [], tint: bucket.tint)
                 }
 
-                taskSection("Open", tasks.filter { !$0.done })
-                if tasks.contains(where: \.done) { taskSection("Completed", tasks.filter(\.done)) }
+                if !doneTasks.isEmpty {
+                    DisclosureGroup(isExpanded: $showCompleted) {
+                        VStack(spacing: 0) { rows(doneTasks) }.orbitCard().padding(.top, 8)
+                    } label: {
+                        Text("Completed  ·  \(doneTasks.count)")
+                            .font(.system(size: 13.5, weight: .semibold))
+                            .foregroundStyle(OrbitTheme.ink2(scheme))
+                    }
+                    .padding(.top, 6)
+                }
+
+                if tasks.isEmpty { emptyState }
             }
-            .padding(orbitWidth.pagePadding).frame(maxWidth: 1040, alignment: .leading).frame(maxWidth: .infinity)
+            .padding(orbitWidth.pagePadding).frame(maxWidth: 900, alignment: .leading).frame(maxWidth: .infinity)
         }
         .background(OrbitTheme.canvas(scheme))
     }
 
-    @ViewBuilder private func taskSection(_ title: String, _ items: [OrbitTask]) -> some View {
-        if !items.isEmpty {
-            VStack(alignment: .leading, spacing: 10) {
-                Text(title).font(.system(size: 14.5, weight: .semibold))
-                VStack(spacing: 0) {
-                    ForEach(Array(items.enumerated()), id: \.element.id) { index, task in
-                        TaskRow(
-                            task: task,
-                            steps: allSteps.filter { $0.taskID == task.id },
-                            open: { selectedTaskID = task.id },
-                            toggle: { toggleTask(task) },
-                            delete: { deleteTask(task) }
-                        )
-                        if index < items.count - 1 { Divider().padding(.leading, 52) }
-                    }
-                }.orbitCard()
+    private var header: some View {
+        HStack(alignment: .firstTextBaseline) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Tasks").font(.system(size: 27, weight: .semibold))
+                Text(summary).font(.system(size: 13.5)).foregroundStyle(OrbitTheme.ink2(scheme))
+            }
+            Spacer()
+            Picker("View", selection: $tasksMode) { Text("List").tag("list"); Text("Board").tag("board") }
+                .pickerStyle(.segmented).frame(width: 150)
+        }
+    }
+
+    /// One line that answers "how am I doing" without a chart.
+    private var summary: String {
+        let groups = grouped
+        let overdue = groups[.overdue]?.count ?? 0
+        let today = groups[.today]?.count ?? 0
+        if overdue > 0 { return "\(overdue) overdue · \(today) due today" }
+        if today > 0 { return "\(today) due today" }
+        return openTasks.isEmpty ? "Nothing open. Enjoy it." : "\(openTasks.count) open · nothing due today"
+    }
+
+    /// Type and press Return. Creating a task should never mean opening a form.
+    private var quickAdd: some View {
+        HStack(spacing: 11) {
+            Image(systemName: "plus.circle.fill")
+                .font(.system(size: 17))
+                .foregroundStyle(OrbitTheme.accent)
+            TextField("Add a task, then press Return", text: $draftTitle)
+                .textFieldStyle(.plain)
+                .font(.system(size: 14))
+                .onSubmit { commitDraft() }
+            if !draftTitle.isEmpty {
+                Menu {
+                    Button("Today") { commitDraft(due: OrbitDate.calendar.startOfDay(for: .now)) }
+                    Button("Tomorrow") { commitDraft(due: OrbitDate.date(daysFromToday: 1)) }
+                    Button("Next week") { commitDraft(due: OrbitDate.date(daysFromToday: 7)) }
+                    Button("No date") { commitDraft() }
+                } label: {
+                    Label("Due", systemImage: "calendar").font(.system(size: 12))
+                }
+                .menuStyle(.borderlessButton).fixedSize()
+                .foregroundStyle(OrbitTheme.ink2(scheme))
             }
         }
+        .padding(.horizontal, 16).frame(height: 50)
+        .background(OrbitTheme.surface(scheme), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .overlay { RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(OrbitTheme.line(scheme)) }
+    }
+
+    private var emptyState: some View {
+        VStack(spacing: 9) {
+            Image(systemName: "checklist").font(.system(size: 26)).foregroundStyle(OrbitTheme.ink3(scheme))
+            Text("No tasks yet").font(.system(size: 15, weight: .semibold))
+            Text("Add one above. Give it a date and it shows up under Today.")
+                .font(.system(size: 12.5)).foregroundStyle(OrbitTheme.ink2(scheme))
+        }
+        .frame(maxWidth: .infinity).padding(.vertical, 54)
+    }
+
+    @ViewBuilder private func taskSection(_ title: String, _ items: [OrbitTask], tint: Color) -> some View {
+        if !items.isEmpty {
+            VStack(alignment: .leading, spacing: 9) {
+                HStack(spacing: 8) {
+                    Circle().fill(tint).frame(width: 7, height: 7)
+                    Text(title).font(.system(size: 13.5, weight: .semibold))
+                    Text("\(items.count)")
+                        .font(.system(size: 11.5, weight: .medium)).monospacedDigit()
+                        .foregroundStyle(OrbitTheme.ink3(scheme))
+                }
+                VStack(spacing: 0) { rows(items) }.orbitCard()
+            }
+        }
+    }
+
+    @ViewBuilder private func rows(_ items: [OrbitTask]) -> some View {
+        ForEach(Array(items.enumerated()), id: \.element.id) { index, task in
+            TaskRow(
+                task: task,
+                steps: allSteps.filter { $0.taskID == task.id },
+                open: { selectedTaskID = task.id },
+                toggle: { toggleTask(task) },
+                setDue: { task.dueDate = $0; try? modelContext.save() },
+                delete: { deleteTask(task) }
+            )
+            if index < items.count - 1 { Divider().padding(.leading, 50) }
+        }
+    }
+
+    private func commitDraft(due: Date? = nil) {
+        let title = draftTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !title.isEmpty else { return }
+        modelContext.insert(OrbitTask(title: title, dueDate: due))
+        try? modelContext.save()
+        draftTitle = ""
     }
 
     private func createTask(at point: CGPoint? = nil) {
