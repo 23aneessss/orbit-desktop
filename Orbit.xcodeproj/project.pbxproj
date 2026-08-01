@@ -22,7 +22,6 @@
 		479BD6591F4FFC084633A176 /* WorkspaceSidebar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F00F4621662B70241598EBD /* WorkspaceSidebar.swift */; };
 		53A3816EC86E5C28C3D0735D /* BlockHitTestTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF7556445D7AB30238181B6A /* BlockHitTestTests.swift */; };
 		567604D291F59AED5CA123E8 /* TaskCompletionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 528B3CA5A15B87580BF57635 /* TaskCompletionService.swift */; };
-		7C8B5DFF0911F41E6BF9FA4D /* PeopleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BBF9172C28578B7EBBFC4A3 /* PeopleView.swift */; };
 		941F215F7CC18B3AE05CA4D0 /* BlockDocument.swift in Sources */ = {isa = PBXBuildFile; fileRef = EFC621EF0E10C8C21C7D49FB /* BlockDocument.swift */; };
 		962AFAA2C1C7F01BC4F98FBC /* IdeaHierarchy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 462AB90CE1584EB03150D62C /* IdeaHierarchy.swift */; };
 		A7E2702CB16A70FF55C63B23 /* PageIcon.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5FBC4BA4DFBF2A4D89D2B94 /* PageIcon.swift */; };
@@ -58,7 +57,6 @@
 		462AB90CE1584EB03150D62C /* IdeaHierarchy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IdeaHierarchy.swift; sourceTree = "<group>"; };
 		46E8F8129B179906DA04E4B1 /* TasksView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TasksView.swift; sourceTree = "<group>"; };
 		495DCA72659439056D676B45 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
-		4BBF9172C28578B7EBBFC4A3 /* PeopleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PeopleView.swift; sourceTree = "<group>"; };
 		4E37DA3D4A718D5948DEF3A7 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		4E423F1AAC47A87A71239D10 /* ExportService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExportService.swift; sourceTree = "<group>"; };
 		51C75835C9455A83B47B5E64 /* ImportService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportService.swift; sourceTree = "<group>"; };
@@ -149,7 +147,6 @@
 				495DCA72659439056D676B45 /* HomeView.swift */,
 				D01EBFA456712515A8DC008C /* IdeaCanvasView.swift */,
 				0932C8BD5D10F4ACA0F61536 /* IdeasView.swift */,
-				4BBF9172C28578B7EBBFC4A3 /* PeopleView.swift */,
 				4E37DA3D4A718D5948DEF3A7 /* SettingsView.swift */,
 				46E8F8129B179906DA04E4B1 /* TasksView.swift */,
 				8F00F4621662B70241598EBD /* WorkspaceSidebar.swift */,
@@ -310,7 +307,6 @@
 				0EED701B49B5BDCD1C364683 /* OrbitLayout.swift in Sources */,
 				46F48D553FD3ABE560B624F5 /* OrbitTheme.swift in Sources */,
 				A7E2702CB16A70FF55C63B23 /* PageIcon.swift in Sources */,
-				7C8B5DFF0911F41E6BF9FA4D /* PeopleView.swift in Sources */,
 				F2B8261C6ABC92342017674C /* SeedService.swift in Sources */,
 				B453DEBCA4D678859B1058AD /* SettingsView.swift in Sources */,
 				567604D291F59AED5CA123E8 /* TaskCompletionService.swift in Sources */,
