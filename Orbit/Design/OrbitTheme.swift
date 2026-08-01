@@ -87,6 +87,24 @@ extension Color {
     }
 }
 
+/// Like `.plain`, but the button's whole frame is clickable.
+///
+/// SwiftUI's plain style only hit-tests the *drawn pixels* of the label, so a
+/// padded row had to be clicked exactly on its text or icon — the padding and
+/// the highlight were dead zones. Filling the shape fixes that, and the pressed
+/// state gives immediate feedback instead of the click feeling ignored.
+struct OrbitRowButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .contentShape(Rectangle())
+            .opacity(configuration.isPressed ? 0.62 : 1)
+    }
+}
+
+extension ButtonStyle where Self == OrbitRowButtonStyle {
+    static var orbitRow: OrbitRowButtonStyle { OrbitRowButtonStyle() }
+}
+
 struct OrbitCardModifier: ViewModifier {
     @Environment(\.colorScheme) private var scheme
 
