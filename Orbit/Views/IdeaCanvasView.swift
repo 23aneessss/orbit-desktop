@@ -79,6 +79,7 @@ struct IdeaCanvasView: View {
         }
         .background(OrbitTheme.canvas(scheme))
         .task { tileUnplacedIdeas() }
+        .onReceive(NotificationCenter.default.publisher(for: .closeOpenPage)) { _ in openedIdeaID = nil }
         .onChange(of: ideas.map(\.id)) { tileUnplacedIdeas() }
         .onChange(of: selectedFolderID) { selectedTags.formIntersection(allTags) }
         // Folders and tags are per-workspace, so stale filters must not persist.

@@ -77,6 +77,9 @@ struct IdeasView: View {
             }
         }
         .onAppear { openRequestedIdea() }
+        .onReceive(NotificationCenter.default.publisher(for: .closeOpenPage)) { _ in
+            selectedIdeaID = nil
+        }
         // A folder from the previous workspace would filter everything away.
         .onChange(of: currentWorkspaceRaw) { selectedFolderID = nil }
         .onChange(of: requestedIdeaID) { openRequestedIdea() }
@@ -489,8 +492,6 @@ struct IdeaEditorView: View {
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
-                    pageBreadcrumb
-
                     titleBlock
 
                     tags
