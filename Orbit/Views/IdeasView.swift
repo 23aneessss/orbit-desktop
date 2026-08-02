@@ -268,7 +268,7 @@ struct IdeasView: View {
         if !ideas.isEmpty {
             VStack(alignment: .leading, spacing: 12) {
                 Text(title).font(.system(size: 14.5, weight: .semibold))
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 250), spacing: 14)], spacing: 14) {
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 208), spacing: 11)], spacing: 11) {
                     ForEach(ideas) { idea in
                         IdeaBrowserCard(
                             idea: idea,
@@ -446,7 +446,9 @@ private struct IdeaBrowserCard: View {
                     Spacer()
                 }
             }
-            .padding(16).frame(maxWidth: .infinity, minHeight: 154, alignment: .topLeading).contentShape(Rectangle())
+            // 154pt was sized around the content preview; without it the card was
+            // mostly empty space.
+            .padding(13).frame(maxWidth: .infinity, minHeight: 78, alignment: .topLeading).contentShape(Rectangle())
         }
         .buttonStyle(.orbitRow).orbitCard()
     }
