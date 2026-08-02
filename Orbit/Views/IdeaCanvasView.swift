@@ -1,6 +1,15 @@
 import SwiftData
 import SwiftUI
 
+/// One definition of a canvas card's footprint. Hit-testing, merge detection,
+/// edge attachment and the view itself all read it, so the height can change
+/// without the link anchors silently drifting off the cards.
+enum CanvasNode {
+    static let size = CGSize(width: 224, height: 62)
+    static var halfWidth: CGFloat { size.width / 2 }
+    static var halfHeight: CGFloat { size.height / 2 }
+}
+
 private struct MergeCandidate: Identifiable {
     let draggedID: UUID
     let targetID: UUID
@@ -21,6 +30,7 @@ struct IdeaCanvasView: View {
         return storedIdeas.filter { $0.workspaceID == id }
     }
     @Query private var links: [IdeaLink]
+    @Query private var settings: [AppSetting]
     @Query(sort: \IdeaFolder.name) private var storedFolders: [IdeaFolder]
 
     private var folders: [IdeaFolder] {
@@ -125,6 +135,7 @@ struct IdeaCanvasView: View {
                     ForEach(visibleIdeas) { idea in
                         CanvasIdeaNode(
                             idea: idea,
+                            icon: PageIcon.read(idea.id, from: settings),
                             childCount: ideas.count { $0.parentID == idea.id },
                             zoom: zoom,
                             pan: pan,
@@ -283,7 +294,7 @@ struct IdeaCanvasView: View {
     private func finishConnection(from source: Idea, at screenPoint: CGPoint) {
         let target = visibleIdeas.first { idea in
             guard idea.id != source.id, let x = idea.canvasX, let y = idea.canvasY else { return false }
-            return CGRect(x: x * zoom + pan.width - 112 * zoom, y: y * zoom + pan.height - 59 * zoom, width: 224 * zoom, height: 118 * zoom).insetBy(dx: -10, dy: -10).contains(screenPoint)
+            return CGRect(x: x * zoom + pan.width - CanvasNode.halfWidth * zoom, y: y * zoom + pan.height - CanvasNode.halfHeight * zoom, width: CanvasNode.size.width * zoom, height: CanvasNode.size.height * zoom).insetBy(dx: -10, dy: -10).contains(screenPoint)
         }
         defer { connectionSourceID = nil; connectionStart = nil; connectionEnd = nil; selectedIdeaID = nil }
         guard let target else { return }
@@ -295,10 +306,10 @@ struct IdeaCanvasView: View {
     private func nodeMoved(_ idea: Idea) {
         try? modelContext.save()
         guard let x = idea.canvasX, let y = idea.canvasY else { return }
-        let movedRect = CGRect(x: x - 112, y: y - 59, width: 224, height: 118)
+        let movedRect = CGRect(x: x - CanvasNode.halfWidth, y: y - CanvasNode.halfHeight, width: CanvasNode.size.width, height: CanvasNode.size.height)
         let candidate = visibleIdeas.filter { $0.id != idea.id }.compactMap { target -> (Idea, CGFloat)? in
             guard let targetX = target.canvasX, let targetY = target.canvasY else { return nil }
-            let targetRect = CGRect(x: targetX - 112, y: targetY - 59, width: 224, height: 118)
+            let targetRect = CGRect(x: targetX - CanvasNode.halfWidth, y: targetY - CanvasNode.halfHeight, width: CanvasNode.size.width, height: CanvasNode.size.height)
             let overlap = movedRect.intersection(targetRect)
             guard !overlap.isNull else { return nil }
             return (target, (overlap.width * overlap.height) / (movedRect.width * movedRect.height))
@@ -455,7 +466,7 @@ private func ideaLinkGeometry(from a: Idea, to b: Idea, pan: CGSize, zoom: CGFlo
     guard let ax = a.canvasX, let ay = a.canvasY, let bx = b.canvasX, let by = b.canvasY else { return nil }
     let aCenter = CGPoint(x: ax * zoom + pan.width, y: ay * zoom + pan.height)
     let bCenter = CGPoint(x: bx * zoom + pan.width, y: by * zoom + pan.height)
-    let nodeSize = CGSize(width: 224 * zoom, height: 118 * zoom)
+    let nodeSize = CGSize(width: CanvasNode.size.width * zoom, height: CanvasNode.size.height * zoom)
     func borderPoint(from center: CGPoint, toward target: CGPoint) -> CGPoint {
         let dx = target.x - center.x, dy = target.y - center.y
         guard dx != 0 || dy != 0 else { return center }
@@ -501,6 +512,8 @@ struct CanvasConnectionPreview: View {
 private struct CanvasIdeaNode: View {
     @Environment(\.colorScheme) private var scheme
     @Bindable var idea: Idea
+    /// The page's emoji, resolved by the parent from settings.
+    let icon: String?
     let childCount: Int
     let zoom: CGFloat
     let pan: CGSize
@@ -514,27 +527,31 @@ private struct CanvasIdeaNode: View {
     @State private var hovering = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 6) {
-                if idea.pinned { Image(systemName: "pin.fill").foregroundStyle(OrbitTheme.accent) }
-                Text(idea.title.isEmpty ? "Untitled" : idea.title).font(.system(size: 13, weight: .semibold)).lineLimit(1)
-                Spacer(minLength: 4)
-                if childCount > 0 {
-                    Label("\(childCount)", systemImage: "doc.on.doc")
-                        .font(.system(size: 9.5, weight: .medium)).foregroundStyle(OrbitTheme.ink3(scheme))
-                }
+        HStack(spacing: 9) {
+            if let icon {
+                Text(icon).font(.system(size: 19))
+            } else {
+                Image(systemName: "doc.text")
+                    .font(.system(size: 15))
+                    .foregroundStyle(OrbitTheme.ink3(scheme))
             }
-            Text(idea.contentExcerpt.isEmpty ? "Nothing written yet." : idea.contentExcerpt)
-                .font(.system(size: 11.5)).foregroundStyle(OrbitTheme.ink2(scheme)).lineLimit(3)
-            HStack(spacing: 5) {
-                ForEach(idea.tags.prefix(2), id: \.self) { tag in
-                    Text("#\(tag)").font(.system(size: 10.5)).foregroundStyle(OrbitTheme.ink2(scheme))
-                        .padding(.horizontal, 6).padding(.vertical, 3)
-                        .background(OrbitTheme.sunken(scheme), in: RoundedRectangle(cornerRadius: 5))
-                }
+
+            Text(idea.title.isEmpty ? "Untitled" : idea.title)
+                .font(.system(size: 13.5, weight: .semibold))
+                .lineLimit(2)
+
+            Spacer(minLength: 4)
+
+            if idea.pinned {
+                Image(systemName: "pin.fill").font(.system(size: 10)).foregroundStyle(OrbitTheme.accent)
+            }
+            if childCount > 0 {
+                Label("\(childCount)", systemImage: "doc.on.doc")
+                    .font(.system(size: 9.5, weight: .medium)).foregroundStyle(OrbitTheme.ink3(scheme))
             }
         }
-        .padding(13).frame(width: 224, height: 118, alignment: .topLeading)
+        .padding(.horizontal, 13)
+        .frame(width: CanvasNode.size.width, height: CanvasNode.size.height, alignment: .leading)
         .background(OrbitTheme.surface(scheme))
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         .overlay { RoundedRectangle(cornerRadius: 12).stroke(selected ? OrbitTheme.accent : OrbitTheme.line(scheme), lineWidth: selected ? 1.7 : 1) }
@@ -563,10 +580,10 @@ private struct CanvasIdeaNode: View {
     @ViewBuilder private var connectionPorts: some View {
         if hovering || connecting {
             ZStack {
-                port(offset: CGPoint(x: 0, y: -59)).offset(y: -59)
-                port(offset: CGPoint(x: 112, y: 0)).offset(x: 112)
-                port(offset: CGPoint(x: 0, y: 59)).offset(y: 59)
-                port(offset: CGPoint(x: -112, y: 0)).offset(x: -112)
+                port(offset: CGPoint(x: 0, y: -CanvasNode.halfHeight)).offset(y: -CanvasNode.halfHeight)
+                port(offset: CGPoint(x: CanvasNode.halfWidth, y: 0)).offset(x: CanvasNode.halfWidth)
+                port(offset: CGPoint(x: 0, y: CanvasNode.halfHeight)).offset(y: CanvasNode.halfHeight)
+                port(offset: CGPoint(x: -CanvasNode.halfWidth, y: 0)).offset(x: -CanvasNode.halfWidth)
             }
         }
     }

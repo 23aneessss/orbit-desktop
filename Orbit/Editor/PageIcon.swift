@@ -93,10 +93,16 @@ enum EmojiCatalog {
         for range in scanRanges {
             for value in range {
                 guard let scalar = Unicode.Scalar(value),
-                      scalar.properties.isEmojiPresentation,
+                      scalar.properties.isEmoji,
+                      !skipped(value),
                       let name = scalar.properties.name else { continue }
 
-                let emoji = String(scalar)
+                // Emoji that default to *text* presentation (✏️ ❤️ ☺️ ⚙️ …) need
+                // U+FE0F to render as emoji. Requiring `isEmojiPresentation`
+                // dropped every one of them — several hundred icons.
+                let emoji = scalar.properties.isEmojiPresentation
+                    ? String(scalar)
+                    : String(scalar) + "\u{FE0F}"
                 let lower = name.lowercased()
                 let keywords = ([lower] + (aliases[emoji].map { [$0] } ?? [])).joined(separator: " ")
                 buckets[classify(value: value, name: lower), default: []].append(
@@ -130,16 +136,41 @@ enum EmojiCatalog {
     /// Blocks that actually contain emoji-presentation scalars. Scanning the
     /// whole plane would work but wastes a few hundred thousand lookups.
     private static let scanRanges: [ClosedRange<UInt32>] = [
+        0x00A9...0x00AE,     // © ®
+        0x203C...0x2049,     // ‼️ ⁉️
+        0x2100...0x21FF,     // Letterlike symbols and arrows
+        0x2300...0x23FF,     // ⌚ ⌨️ ⏰ ⏳ and media controls
+        0x2460...0x24FF,     // Enclosed alphanumerics (Ⓜ️)
+        0x25A0...0x25FF,     // Geometric shapes
+        0x2600...0x27BF,     // Miscellaneous symbols and dingbats
+        0x2900...0x297F,     // Supplemental arrows
+        0x2B00...0x2BFF,     // Additional arrows and shapes
+        0x3030...0x303D,     // 〰️ 〽️
+        0x3297...0x3299,     // ㊗️ ㊙️
         0x1F000...0x1F0FF,   // Mahjong, dominoes, playing cards
         0x1F100...0x1F2FF,   // Enclosed alphanumerics and ideographs
         0x1F300...0x1F5FF,   // Miscellaneous symbols and pictographs
         0x1F600...0x1F64F,   // Emoticons
+        0x1F650...0x1F67F,   // Ornamental dingbats
         0x1F680...0x1F6FF,   // Transport and map
+        0x1F780...0x1F7FF,   // Geometric shapes extended (🟠 🟥 …)
         0x1F900...0x1F9FF,   // Supplemental symbols and pictographs
-        0x1FA70...0x1FAFF,   // Symbols and pictographs extended-A
-        0x2600...0x27BF,     // Miscellaneous symbols and dingbats
-        0x2B00...0x2BFF
+        0x1FA00...0x1FA6F,   // Chess, symbols extended
+        0x1FA70...0x1FAFF    // Symbols and pictographs extended-A (newest emoji)
     ]
+
+    /// Scalars that are technically emoji but must not appear as pickable icons:
+    /// skin-tone and hair modifiers, and the regional letters that only mean
+    /// something when paired into a flag (those are built separately).
+    private static func skipped(_ value: UInt32) -> Bool {
+        switch value {
+        case 0x1F3FB...0x1F3FF: true   // skin tone modifiers
+        case 0x1F9B0...0x1F9B3: true   // hair components
+        case 0x1F1E6...0x1F1FF: true   // regional indicators
+        case 0x200D, 0xFE0F, 0x20E3: true
+        default: false
+        }
+    }
 
     /// Unicode blocks are not semantic, so the block only decides the obvious
     /// cases and the scalar's own name settles the rest.
