@@ -514,8 +514,10 @@ struct IdeaEditorView: View {
 
     private var editorHeader: some View {
         HStack(spacing: 14) {
-            Button(action: close) { Label("Ideas", systemImage: "chevron.left") }.buttonStyle(.orbitRow)
-            Spacer()
+            // The path lives here now: it says where you are *and* gets you back,
+            // so the old "‹ Ideas" button was doing half its job twice.
+            pageBreadcrumb
+            Spacer(minLength: 12)
             Text(saveState).font(.system(size: 11.5)).foregroundStyle(OrbitTheme.ink3(scheme))
             Button { showingRelations.toggle() } label: {
                 HStack(spacing: 4) {
@@ -547,9 +549,13 @@ struct IdeaEditorView: View {
     /// right-click menu so the path reads as a path.
     @ViewBuilder private var pageBreadcrumb: some View {
         let trail = IdeaHierarchy.ancestors(of: idea, in: allIdeas)
-        if !trail.isEmpty {
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 2) {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 2) {
+                    rootCrumb
+                    Text("/")
+                        .font(.system(size: 14))
+                        .foregroundStyle(OrbitTheme.ink3(scheme).opacity(0.55))
+
                     ForEach(trail) { ancestor in
                         crumb(id: ancestor.id, title: ancestor.title, isCurrent: false) {
                             openIdea(ancestor.id)
@@ -559,18 +565,42 @@ struct IdeaEditorView: View {
                             .foregroundStyle(OrbitTheme.ink3(scheme).opacity(0.55))
                     }
 
-                    crumb(id: idea.id, title: idea.title, isCurrent: true, action: nil)
-                        .contextMenu {
-                            Button("Move to top level", systemImage: "arrow.up.left") {
-                                idea.parentID = nil
-                                scheduleSave()
-                            }
+                crumb(id: idea.id, title: idea.title, isCurrent: true, action: nil)
+                    .contextMenu {
+                        Button("Move to top level", systemImage: "arrow.up.left") {
+                            idea.parentID = nil
+                            scheduleSave()
                         }
-                }
-                .padding(.bottom, 2)
+                    }
             }
         }
     }
+
+    /// First link of the path: back to the Ideas list.
+    private var rootCrumb: some View {
+        Button(action: close) {
+            HStack(spacing: 5) {
+                Image(systemName: "lightbulb").font(.system(size: 12))
+                Text("Ideas")
+            }
+            .font(.system(size: 14, weight: .medium))
+            .foregroundStyle(OrbitTheme.ink2(scheme))
+            .padding(.horizontal, 6).padding(.vertical, 3)
+            .background(
+                hoveredCrumbID == Self.rootCrumbID ? OrbitTheme.sunken(scheme) : .clear,
+                in: RoundedRectangle(cornerRadius: 5)
+            )
+        }
+        .buttonStyle(.orbitRow)
+        .onHover { hovering in
+            if hovering { hoveredCrumbID = Self.rootCrumbID }
+            else if hoveredCrumbID == Self.rootCrumbID { hoveredCrumbID = nil }
+        }
+        .help("Back to Ideas")
+    }
+
+    /// Sentinel so the root shares the same hover state as the other crumbs.
+    private static let rootCrumbID = UUID()
 
     @ViewBuilder
     private func crumb(id: UUID, title: String, isCurrent: Bool, action: (() -> Void)?) -> some View {

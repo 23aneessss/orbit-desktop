@@ -284,7 +284,16 @@ struct AppShellView: View {
                     .foregroundStyle(OrbitTheme.ink3(scheme))
             }
 
-            Text(selection.rawValue).fontWeight(.medium).lineLimit(1)
+            // Clicking the section name returns to that section's list, the same
+            // as the back action inside an open page.
+            Button {
+                NotificationCenter.default.post(name: .closeOpenPage, object: nil)
+            } label: {
+                Text(selection.rawValue).fontWeight(.medium).lineLimit(1)
+                    .padding(.horizontal, 6).padding(.vertical, 2)
+            }
+            .buttonStyle(.orbitRow)
+            .help("Back to \(selection.rawValue)")
 
             Spacer(minLength: 8)
 

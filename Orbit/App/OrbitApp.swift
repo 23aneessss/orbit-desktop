@@ -82,4 +82,7 @@ struct OrbitApp: App {
 
 extension Notification.Name {
     static let openCommandPalette = Notification.Name("orbit.open-command-palette")
+    /// Posted by the topbar breadcrumb; whichever screen has a page open closes
+    /// it and returns to its list.
+    static let closeOpenPage = Notification.Name("orbit.close-open-page")
 }
