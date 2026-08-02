@@ -425,9 +425,6 @@ private struct IdeaBrowserCard: View {
                     }
                     .menuStyle(.borderlessButton).fixedSize()
                 }
-                Text(idea.contentExcerpt.isEmpty ? "Nothing written yet." : idea.contentExcerpt)
-                    .font(.system(size: 12)).foregroundStyle(OrbitTheme.ink2(scheme)).lineLimit(3)
-                    .frame(maxWidth: .infinity, minHeight: 52, alignment: .topLeading)
                 HStack(spacing: 5) {
                     ForEach(idea.tags.prefix(2), id: \.self) { tag in
                         Text("#\(tag)").font(.system(size: 10.5)).foregroundStyle(OrbitTheme.ink2(scheme))

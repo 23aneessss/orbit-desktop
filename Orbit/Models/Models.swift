@@ -166,16 +166,6 @@ final class Idea {
         }
     }
 
-    var contentExcerpt: String {
-        content
-            .replacingOccurrences(of: #"```[\s\S]*?```"#, with: " ", options: .regularExpression)
-            .replacingOccurrences(of: #"!\[([^\]]*)\]\([^\)]*\)"#, with: "$1", options: .regularExpression)
-            .replacingOccurrences(of: #"\[([^\]]+)\]\([^\)]*\)"#, with: "$1", options: .regularExpression)
-            .replacingOccurrences(of: #"(?m)^\s{0,3}(#{1,6}|>|[-+*]|\d+\.)\s+"#, with: "", options: .regularExpression)
-            .replacingOccurrences(of: #"[*_~`]"#, with: "", options: .regularExpression)
-            .replacingOccurrences(of: #"\s+"#, with: " ", options: .regularExpression)
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-    }
 }
 
 @Model
