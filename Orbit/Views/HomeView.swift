@@ -110,18 +110,6 @@ struct HomeView: View {
                     .frame(maxWidth: .infinity)
                     .orbitCard()
 
-                    VStack(spacing: 16) {
-                        VStack(alignment: .leading, spacing: 14) {
-                            Text("Recent ideas").font(.system(size: 15, weight: .semibold))
-                            ForEach(ideas.prefix(3)) { idea in
-                                VStack(alignment: .leading, spacing: 3) {
-                                    Text(idea.title).font(.system(size: 12.5, weight: .medium)).lineLimit(1)
-                                    Text(idea.content).font(.system(size: 11)).foregroundStyle(OrbitTheme.ink2(scheme)).lineLimit(2)
-                                }
-                            }
-                        }.padding(18).orbitCard()
-                    }
-                    .frame(maxWidth: 310, alignment: .leading)
                 }
             }
             .padding(orbitWidth.pagePadding)
