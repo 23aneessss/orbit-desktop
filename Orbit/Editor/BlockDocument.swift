@@ -20,6 +20,7 @@ struct Block: Identifiable, Equatable {
     var raw: String?
 
 
+
     init(
         id: UUID = UUID(),
         kind: BlockKind = .paragraph,
