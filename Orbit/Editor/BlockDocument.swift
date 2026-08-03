@@ -19,6 +19,7 @@ struct Block: Identifiable, Equatable {
     var pageID: UUID?
     var raw: String?
 
+
     init(
         id: UUID = UUID(),
         kind: BlockKind = .paragraph,
