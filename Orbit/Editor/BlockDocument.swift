@@ -27,6 +27,7 @@ struct Block: Identifiable, Equatable {
 
 
 
+
     init(
         id: UUID = UUID(),
         kind: BlockKind = .paragraph,
