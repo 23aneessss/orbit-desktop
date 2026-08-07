@@ -384,6 +384,15 @@ private struct CommandPaletteView: View {
     @Binding var selection: OrbitSection
     @Binding var isPresented: Bool
     @Binding var requestedIdeaID: UUID?
+    @Query private var workspaces: [Workspace]
+    @EnvironmentObject private var lock: WorkspaceLock
+
+    /// A locked workspace's pages must not surface in search — that would defeat
+    /// the whole point of the lock.
+    private var searchableIdeas: [Idea] {
+        let hidden = Set(workspaces.filter { $0.locked && !lock.isUnlocked($0.id) }.map(\.id))
+        return hidden.isEmpty ? ideas : ideas.filter { $0.workspaceID.map { !hidden.contains($0) } ?? true }
+    }
     @State private var query = ""
 
     private var results: [OrbitSection] {
@@ -420,7 +429,7 @@ private struct CommandPaletteView: View {
                         }
                     }
 
-                    let matchingIdeas = ideas.filter { query.isEmpty || $0.title.localizedStandardContains(query) }
+                    let matchingIdeas = searchableIdeas.filter { query.isEmpty || $0.title.localizedStandardContains(query) }
                     if !matchingIdeas.isEmpty {
                         paletteHeader("IDEAS")
                         ForEach(matchingIdeas.prefix(8)) { idea in paletteButton(idea.title.isEmpty ? "Untitled" : idea.title, symbol: "lightbulb") { requestedIdeaID = idea.id; selection = .ideas; isPresented = false } }

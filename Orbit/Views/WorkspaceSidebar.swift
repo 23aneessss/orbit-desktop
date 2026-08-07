@@ -13,6 +13,7 @@ struct WorkspaceSidebar: View {
     /// Empty means "not chosen yet"; the views then show every idea rather than
     /// hiding anything.
     @AppStorage("orbit:workspace") private var currentID = ""
+    @EnvironmentObject private var lock: WorkspaceLock
     let rail: Bool
     /// Jump to the Ideas screen when a workspace is picked.
     let openIdeas: () -> Void
@@ -77,6 +78,11 @@ struct WorkspaceSidebar: View {
                         .font(.system(size: 13.5, weight: .medium))
                         .lineLimit(1)
                     Spacer(minLength: 4)
+                    if workspace.locked {
+                        Image(systemName: lock.isUnlocked(workspace.id) ? "lock.open" : "lock.fill")
+                            .font(.system(size: 10))
+                            .foregroundStyle(OrbitTheme.ink3(scheme))
+                    }
                 }
             }
             .foregroundStyle(isCurrent ? OrbitTheme.accent : OrbitTheme.ink2(scheme))
@@ -104,6 +110,22 @@ struct WorkspaceSidebar: View {
         .contextMenu {
             Button("Rename or change icon", systemImage: "pencil") {
                 draft = Draft(workspace: workspace, name: workspace.name, icon: workspace.icon)
+            }
+            Divider()
+            if workspace.locked {
+                // Re-locking is instant; it just forgets the in-memory unlock.
+                Button("Lock now", systemImage: "lock.fill") { lock.lock(workspace.id) }
+                    .disabled(!lock.isUnlocked(workspace.id))
+                Button("Remove lock", systemImage: "lock.slash") {
+                    workspace.locked = false
+                    try? modelContext.save()
+                }
+            } else {
+                Button("Require Touch ID", systemImage: "touchid") {
+                    workspace.locked = true
+                    lock.lock(workspace.id)
+                    try? modelContext.save()
+                }
             }
             Divider()
             // Disabled on the last workspace — the service also refuses it, so
