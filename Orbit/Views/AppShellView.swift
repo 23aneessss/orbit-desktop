@@ -29,6 +29,7 @@ struct AppShellView: View {
     @Query private var habits: [Habit]
     @Query private var logs: [HabitLog]
     @Query private var settings: [AppSetting]
+    @Query private var workspaces: [Workspace]
 
     @AppStorage("orbit:sidebar-collapsed") private var sidebarCollapsed = false
     @AppStorage("orbit:workspace") private var workspaceID = ""
@@ -124,6 +125,13 @@ struct AppShellView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: .openCommandPalette)) { _ in
             commandPalettePresented = true
+        }
+        // ⌘L relocks the workspace you are looking at. Harmless when it has no
+        // lock — nothing to hide, nothing happens.
+        .onReceive(NotificationCenter.default.publisher(for: .lockCurrentWorkspace)) { _ in
+            guard let id = UUID(uuidString: workspaceID),
+                  workspaces.contains(where: { $0.id == id && $0.locked }) else { return }
+            workspaceLock.lock(id)
         }
         .sheet(isPresented: $commandPalettePresented) {
             CommandPaletteView(selection: $selection, isPresented: $commandPalettePresented, requestedIdeaID: $requestedIdeaID)

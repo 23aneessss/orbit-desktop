@@ -75,6 +75,11 @@ struct OrbitApp: App {
                     NotificationCenter.default.post(name: .openCommandPalette, object: nil)
                 }
                 .keyboardShortcut("k", modifiers: .command)
+
+                Button("Lock Workspace") {
+                    NotificationCenter.default.post(name: .lockCurrentWorkspace, object: nil)
+                }
+                .keyboardShortcut("l", modifiers: .command)
             }
         }
     }
@@ -85,4 +90,6 @@ extension Notification.Name {
     /// Posted by the topbar breadcrumb; whichever screen has a page open closes
     /// it and returns to its list.
     static let closeOpenPage = Notification.Name("orbit.close-open-page")
+    /// ⌘L — relock the current workspace on the way out the door.
+    static let lockCurrentWorkspace = Notification.Name("orbit.lock-current-workspace")
 }
