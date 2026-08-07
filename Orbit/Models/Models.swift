@@ -84,13 +84,17 @@ final class Workspace {
     var icon: String
     var orderIndex: Int
     var createdAt: Date
+    /// Whether opening this workspace requires Touch ID. Defaulted, so the store
+    /// migrates in place and every existing workspace stays unlocked.
+    var locked: Bool = false
 
-    init(id: UUID = UUID(), name: String, icon: String = "🗂", orderIndex: Int = 0, createdAt: Date = .now) {
+    init(id: UUID = UUID(), name: String, icon: String = "🗂", orderIndex: Int = 0, createdAt: Date = .now, locked: Bool = false) {
         self.id = id
         self.name = name
         self.icon = icon
         self.orderIndex = orderIndex
         self.createdAt = createdAt
+        self.locked = locked
     }
 }
 
