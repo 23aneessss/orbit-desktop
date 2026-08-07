@@ -38,6 +38,8 @@ struct AppShellView: View {
     @State private var commandPalettePresented = false
     @State private var requestedIdeaID: UUID?
     @State private var overlaySidebar = false
+    /// In-memory, so every launch starts with locked workspaces locked.
+    @StateObject private var workspaceLock = WorkspaceLock()
 
     private var displayName: String {
         settings.first(where: { $0.key == "name" })?.value ?? ""
@@ -108,6 +110,7 @@ struct AppShellView: View {
                 if updated != .hidden { overlaySidebar = false }
             }
         }
+        .environmentObject(workspaceLock)
         .background(OrbitTheme.canvas(scheme))
         .foregroundStyle(OrbitTheme.ink(scheme))
         .preferredColorScheme(preferredColorScheme)

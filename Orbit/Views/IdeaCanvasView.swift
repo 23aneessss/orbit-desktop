@@ -31,6 +31,8 @@ struct IdeaCanvasView: View {
     }
     @Query private var links: [IdeaLink]
     @Query private var settings: [AppSetting]
+    @Query private var workspaces: [Workspace]
+    @EnvironmentObject private var lock: WorkspaceLock
     @Query(sort: \IdeaFolder.name) private var storedFolders: [IdeaFolder]
 
     private var folders: [IdeaFolder] {
@@ -68,9 +70,16 @@ struct IdeaCanvasView: View {
         }.map(\.key)
     }
 
+    private var currentWorkspace: Workspace? {
+        guard let id = UUID(uuidString: currentWorkspaceRaw) else { return nil }
+        return workspaces.first { $0.id == id }
+    }
+
     var body: some View {
         Group {
-            if let openedIdeaID,
+            if let workspace = currentWorkspace, lock.isBlocked(workspace) {
+                WorkspaceLockScreen(workspace: workspace)
+            } else if let openedIdeaID,
                let idea = ideas.first(where: { $0.id == openedIdeaID }) {
                 IdeaEditorView(idea: idea, openIdea: { self.openedIdeaID = $0 }) { self.openedIdeaID = nil }
             } else {

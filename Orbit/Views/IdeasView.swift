@@ -27,6 +27,7 @@ struct IdeasView: View {
         guard let currentWorkspaceID else { return storedFolders }
         return storedFolders.filter { $0.workspaceID == currentWorkspaceID }
     }
+    @EnvironmentObject private var lock: WorkspaceLock
     @Binding var requestedIdeaID: UUID?
 
     @State private var query = ""
@@ -68,9 +69,15 @@ struct IdeasView: View {
         }.map(\.key)
     }
 
+    private var currentWorkspace: Workspace? {
+        workspaces.first { $0.id == currentWorkspaceID }
+    }
+
     var body: some View {
         Group {
-            if let selectedIdeaID, let idea = ideas.first(where: { $0.id == selectedIdeaID }) {
+            if let workspace = currentWorkspace, lock.isBlocked(workspace) {
+                WorkspaceLockScreen(workspace: workspace)
+            } else if let selectedIdeaID, let idea = ideas.first(where: { $0.id == selectedIdeaID }) {
                 IdeaEditorView(idea: idea, openIdea: { self.selectedIdeaID = $0 }) { self.selectedIdeaID = nil }
             } else {
                 browser
