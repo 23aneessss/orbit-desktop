@@ -4,12 +4,11 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Orbit — Your work, in orbit</title>
-  <meta name="description" content="Orbit is a private, local-first personal operating system for macOS — habits, connected ideas, a native canvas, tasks, workflows, and a personal CRM. No account. No telemetry." />
+  <meta name="description" content="Orbit is a private, local-first personal operating system for macOS — workspaces you can lock with Touch ID, a block editor, a native canvas, tasks and habits. No account. No telemetry." />
 
   <meta property="og:type" content="website" />
   <meta property="og:title" content="Orbit — Your work, in orbit" />
-  <meta property="og:description" content="A private, local-first personal OS for macOS. Habits, ideas, canvas, tasks, and people — in one calm workspace." />
-  <meta property="og:image" content="assets/screens/home.png" />
+  <meta property="og:description" content="A private, local-first personal OS for macOS. Lockable workspaces, connected ideas, a native canvas, tasks and habits — in one calm window." />
   <meta name="twitter:card" content="summary_large_image" />
 
   <link rel="icon" href="assets/orbit-icon.svg" type="image/svg+xml" />
@@ -65,9 +64,9 @@
       <div class="hero__content">
         <h1 class="hero__title">Your work,<br /><span class="grad">in orbit.</span></h1>
         <p class="hero__sub">
-          One calm Mac workspace where habits, connected ideas, a native canvas, tasks,
-          workflows, and the people you care about all revolve around you — private,
-          offline, and entirely yours.
+          One calm Mac window where your habits, connected ideas, a native canvas and
+          your tasks all revolve around you — in workspaces you can lock with Touch ID.
+          Private, offline, and entirely yours.
         </p>
         <div class="hero__cta">
           <a class="btn btn--primary btn--lg" rel="noopener"
@@ -75,7 +74,7 @@
             <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 21h14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
             Download for macOS
           </a>
-          <a class="btn btn--ghost btn--lg" href="#features">See the features</a>
+          <a class="btn btn--ghost btn--lg" href="#features">See what’s inside</a>
         </div>
         <p class="hero__meta">Free · No account · No telemetry · Apple Silicon &amp; Intel</p>
       </div>
@@ -100,133 +99,78 @@
         <li><span class="pill__icon" style="--c:#3D6DF2"><svg class="ic"><use href="#ic-canvas"/></svg></span>Canvas</li>
         <li><span class="pill__icon" style="--c:#0EA5E9"><svg class="ic"><use href="#ic-tasks"/></svg></span>Tasks</li>
         <li><span class="pill__icon" style="--c:#0EA5A8"><svg class="ic"><use href="#ic-people"/></svg></span>People</li>
-        <li><span class="pill__icon" style="--c:#B687FF"><svg class="ic"><use href="#ic-command"/></svg></span>Command</li>
+        <li><span class="pill__icon" style="--c:#B687FF"><svg class="ic"><use href="#ic-command"/></svg></span>Workspaces</li>
+        <li><span class="pill__icon" style="--c:#10B981"><svg class="ic"><use href="#ic-lock"/></svg></span>Touch ID</li>
       </ul>
     </div>
   </section>
 
   <!-- ============ FEATURES ============ -->
   <main id="features">
+    <section class="wrap features" data-reveal>
+      <h2 class="center">Everything in one calm workspace</h2>
+      <p class="center lead features__lead">Six tools that usually live in six different apps — sharing one keyboard, one window, and one local database.</p>
 
-    <!-- Home -->
-    <section class="feature wrap" data-reveal>
-      <div class="feature__text">
-        <p class="kicker" style="--c:var(--accent)">Home</p>
-        <h2>A calm home for the whole day</h2>
-        <p>Open Orbit to your streak, today's habits, a full year of activity, the follow-ups that are due, and your most recent ideas — one glance, no noise.</p>
-        <ul class="ticks">
-          <li>Live 52-week activity heatmap</li>
-          <li>Today's progress and current streak</li>
-          <li>Due follow-ups and recent ideas at a glance</li>
-        </ul>
+      <div class="features__grid">
+        <article class="feat">
+          <span class="feat__ic" style="--c:#8B5CF6"><svg class="ic"><use href="#ic-command"/></svg></span>
+          <h3>Workspaces</h3>
+          <p>Separate spaces for separate parts of your life. Each keeps its own ideas, folders, tags and canvas. Reorder them by drag, and move a page between them whenever the boundary shifts.</p>
+        </article>
+
+        <article class="feat">
+          <span class="feat__ic" style="--c:#0EA5A8"><svg class="ic"><use href="#ic-lock"/></svg></span>
+          <h3>Locked with Touch ID</h3>
+          <p>Mark a workspace private and it opens only after Touch ID, with your Mac password as fallback. Press <kbd>⌘</kbd><kbd>L</kbd> to re-lock on your way out, and everything re-locks on every launch.</p>
+        </article>
+
+        <article class="feat">
+          <span class="feat__ic" style="--c:#6366F1"><svg class="ic"><use href="#ic-ideas"/></svg></span>
+          <h3>A real block editor</h3>
+          <p>Markdown shortcuts, slash commands, drag-to-reorder blocks, nested sub-pages and page emojis. Select blocks with the mouse or the keyboard, then copy or delete them as a unit.</p>
+        </article>
+
+        <article class="feat">
+          <span class="feat__ic" style="--c:#3D6DF2"><svg class="ic"><use href="#ic-canvas"/></svg></span>
+          <h3>Canvas, not a web view</h3>
+          <p>Drag idea cards around an infinite grid, pull Bézier links between them, overlap two to merge. Rebuilt natively in SwiftUI — no browser engine, no React Flow.</p>
+        </article>
+
+        <article class="feat">
+          <span class="feat__ic" style="--c:#0EA5E9"><svg class="ic"><use href="#ic-tasks"/></svg></span>
+          <h3>Tasks that answer “now what”</h3>
+          <p>Type and press Return to capture. Work is grouped by <b>Overdue</b>, <b>Today</b>, <b>Upcoming</b> and <b>No date</b> — not one flat list. A spatial board adds steps, workflows, sticky notes and ink.</p>
+        </article>
+
+        <article class="feat">
+          <span class="feat__ic" style="--c:#B687FF"><svg class="ic"><use href="#ic-habits"/></svg></span>
+          <h3>Habits you can see</h3>
+          <p>Interactive 52-week heatmaps, weekly goals and one-click check-ins. Consistency becomes something you look at rather than something you estimate.</p>
+        </article>
       </div>
-      <figure class="shot" data-tilt>
-        <div class="shot__frame">
-          <div class="shot__bar"><i></i><i></i><i></i></div>
-          <img src="assets/screens/home.png" alt="Orbit's Home dashboard showing current streak, today's habits, a 52-week activity heatmap, follow-ups and recent ideas." loading="lazy" />
-        </div>
-      </figure>
     </section>
 
-    <!-- Habits -->
-    <section class="feature feature--rev wrap" data-reveal>
+    <!-- Canvas demo keeps its interactive proof -->
+    <section class="feature wrap" id="canvas" data-reveal>
       <div class="feature__text">
-        <p class="kicker" style="--c:var(--emerald)">Habits</p>
-        <h2>Habits that actually show up</h2>
-        <p>Interactive 52-week heatmaps make consistency visible. Set a weekly goal, log today with a click, and watch the streak build. Absence becomes obvious — in a good way.</p>
-        <ul class="ticks">
-          <li>Per-habit contribution graphs</li>
-          <li>Daily and weekly targets</li>
-          <li>Color-coded, keyboard-friendly check-ins</li>
-        </ul>
-      </div>
-      <figure class="shot" data-tilt>
-        <div class="shot__frame">
-          <div class="shot__bar"><i></i><i></i><i></i></div>
-          <img src="assets/screens/habits.png" alt="Orbit's Habits screen with full 52-week heatmaps for Deep work, Workout and Read 20 pages, plus weekly goal progress." loading="lazy" />
-        </div>
-      </figure>
-    </section>
-
-    <!-- Ideas -->
-    <section class="feature wrap" data-reveal>
-      <div class="feature__text">
-        <p class="kicker" style="--c:var(--amber)">Ideas</p>
-        <h2>Capture now, connect later</h2>
-        <p>A fast, autosaving long-form editor with full-text and tag search, pinning, and folders. Every idea is a card you can later drag onto the canvas and link to others.</p>
-        <ul class="ticks">
-          <li>Markdown editor with instant autosave</li>
-          <li>Full-text &amp; tag search, pins and folders</li>
-          <li>Local metadata — nothing leaves your Mac</li>
-        </ul>
-      </div>
-      <figure class="shot" data-tilt>
-        <div class="shot__frame">
-          <div class="shot__bar"><i></i><i></i><i></i></div>
-          <img src="assets/screens/ideas.png" alt="Orbit's Ideas library with search, tags, pinned notes and idea cards." loading="lazy" />
-        </div>
-      </figure>
-    </section>
-
-    <!-- Canvas (headline feature + interactive demo) -->
-    <section class="feature feature--rev wrap" id="canvas" data-reveal>
-      <div class="feature__text">
-        <p class="kicker" style="--c:var(--cobalt)">Canvas</p>
-        <h2>A real canvas — not a web view</h2>
-        <p>Drag ideas around an infinite space, hover to reveal ports, pull a Bézier link between two cards, or overlap them to merge. It's a native SwiftUI scene rebuilt from scratch — no browser, no React Flow.</p>
-        <p class="muted">Try it right here:</p>
+        <p class="kicker" style="--c:var(--cobalt)">Try it here</p>
+        <h2>Drag a card. Pull a link.</h2>
+        <p>This is a small version of the real canvas, running in the page. In the app it holds your whole workspace — with pan, zoom, sub-pages and merge.</p>
         <div class="minicanvas" id="miniCanvas" role="application" aria-label="Interactive demo: drag the cards, drag a port to link two cards.">
           <svg class="minicanvas__edges" id="miniEdges" aria-hidden="true"></svg>
-          <!-- nodes injected by ui.js -->
         </div>
         <p class="hint">Drag a card to move it · drag the ● port to connect two cards</p>
       </div>
-      <figure class="shot" data-tilt>
-        <div class="shot__frame">
-          <div class="shot__bar"><i></i><i></i><i></i></div>
-          <img src="assets/screens/canvas.png" alt="Orbit's Canvas: idea cards linked by curved Bézier connections on an infinite dotted grid." loading="lazy" />
-        </div>
-      </figure>
-    </section>
-
-    <!-- Tasks -->
-    <section class="feature wrap" data-reveal>
       <div class="feature__text">
-        <p class="kicker" style="--c:var(--rose)">Tasks &amp; Workflows</p>
-        <h2>From a quick to-do to a full workflow</h2>
-        <p>Keep simple actions in a clean list, or switch to a spatial board with hierarchical steps, recursive completion, sticky notes, and freehand ink. Directed step graphs turn a task into a workflow.</p>
-        <ul class="ticks">
-          <li>List and spatial board views</li>
-          <li>Nested steps with recursive completion</li>
-          <li>Sticky notes &amp; pen strokes on the board</li>
-        </ul>
+        <p class="kicker" style="--c:var(--indigo)">Under the hood</p>
+        <h2>Native where it earns trust</h2>
+        <ol class="native__steps">
+          <li><span>1</span> Nodes, notes and ink persist in world-space coordinates.</li>
+          <li><span>2</span> A shared viewport transform applies pan &amp; zoom.</li>
+          <li><span>3</span> Nodes stay real SwiftUI views — crisp, focusable, accessible.</li>
+          <li><span>4</span> Grids, edges and strokes render through SwiftUI <code>Canvas</code>.</li>
+        </ol>
       </div>
-      <figure class="shot" data-tilt>
-        <div class="shot__frame">
-          <div class="shot__bar"><i></i><i></i><i></i></div>
-          <img src="assets/screens/tasks.png" alt="Orbit's Tasks list with open and completed tasks and a workflow with step progress." loading="lazy" />
-        </div>
-      </figure>
-    </section>
-
-    <!-- People -->
-    <section class="feature feature--rev wrap" data-reveal>
-      <div class="feature__text">
-        <p class="kicker" style="--c:var(--teal)">People</p>
-        <h2>Remember the context, not just the contact</h2>
-        <p>A quiet personal CRM: searchable contacts, favorites, a follow-up queue, and a full interaction history — so the people you care about never quietly slip off the radar.</p>
-        <ul class="ticks">
-          <li>Follow-up queue with due reminders</li>
-          <li>Per-person interaction history</li>
-          <li>Search by name, company, role or tag</li>
-        </ul>
-      </div>
-      <figure class="shot" data-tilt>
-        <div class="shot__frame">
-          <div class="shot__bar"><i></i><i></i><i></i></div>
-          <img src="assets/screens/people.png" alt="Orbit's People screen: a personal CRM table with follow-up badges and favorites." loading="lazy" />
-        </div>
-      </figure>
     </section>
   </main>
 
@@ -264,20 +208,7 @@
   </section>
 
   <!-- ============ NATIVE STORY ============ -->
-  <section class="native wrap" data-reveal>
-    <div class="native__text">
-      <p class="kicker" style="--c:var(--indigo)">Under the hood</p>
-      <h2>Native where it earns your trust</h2>
-      <p>React Flow is a React component, so Orbit rebuilds its behavior with a native scene architecture — real SwiftUI views for sharp text, focus and accessibility, with grids, edges and ink drawn efficiently through <code>Canvas</code>.</p>
-    </div>
-    <ol class="native__steps">
-      <li><span>1</span> Nodes, notes and ink are stored in world-space coordinates.</li>
-      <li><span>2</span> A shared viewport transform applies pan &amp; zoom.</li>
-      <li><span>3</span> Nodes stay real SwiftUI views — crisp, focusable, accessible.</li>
-      <li><span>4</span> Grids, edges, previews and strokes render through SwiftUI <code>Canvas</code>.</li>
-      <li><span>5</span> Bézier curves attach to node borders with forgiving hit targets.</li>
-    </ol>
-  </section>
+
 
   <!-- ============ SPECS ============ -->
   <section class="specs wrap" aria-label="Requirements">
@@ -285,7 +216,7 @@
     <div class="spec"><dt>Chips</dt><dd>Apple Silicon &amp; Intel</dd></div>
     <div class="spec"><dt>Storage</dt><dd>Local only · SwiftData</dd></div>
     <div class="spec"><dt>Network</dt><dd>Not required</dd></div>
-    <div class="spec"><dt>Version</dt><dd>1.0.0</dd></div>
+    <div class="spec"><dt>Version</dt><dd>1.1.0</dd></div>
     <div class="spec"><dt>Price</dt><dd>Free</dd></div>
   </section>
 
@@ -301,7 +232,7 @@
         <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 21h14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
         Download for macOS
       </a>
-      <p class="download__req">Universal · macOS 14+ · <span id="dmgSize">8.3 MB</span></p>
+      <p class="download__req">Universal · macOS 14+ · <span id="dmgSize">6.6 MB</span></p>
       <details class="download__note">
         <summary>Opening an app from outside the App Store</summary>
         <p>If macOS Gatekeeper warns that the app is from an unidentified developer, right-click <b>Orbit.app</b> → <b>Open</b> → <b>Open</b>. You only need to do this once.</p>
